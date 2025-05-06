@@ -1,1 +1,0 @@
-Criando diretorio teste_sensores
