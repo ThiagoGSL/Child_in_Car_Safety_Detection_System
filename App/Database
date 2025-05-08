@@ -1,0 +1,64 @@
+import 'package:sqflite/sqflite.dart';
+import 'package:path/path.dart';
+
+class DatabaseHelper {
+  static final DatabaseHelper _instance = DatabaseHelper._internal();
+  factory DatabaseHelper() => _instance;
+  DatabaseHelper._internal();
+
+  static Database? _db;
+
+  Future<Database> get database async {
+    if (_db != null) return _db!;
+    _db = await _initDb();
+    return _db!;
+  }
+
+  Future<Database> _initDb() async {
+    final dbPath = await getDatabasesPath();
+    final path = join(dbPath, 'sensores.db');
+
+    return await openDatabase(path, version: 1, onCreate: _onCreate);
+  }
+
+  Future<void> _onCreate(Database db, int version) async {
+    await db.execute('''
+      CREATE TABLE acelerometro (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        x REAL, y REAL, z REAL,
+        timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE giroscopio (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        x REAL, y REAL, z REAL,
+        timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE localizacao (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        latitude REAL, longitude REAL,
+        timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    ''');
+  }
+
+  Future<void> inserirAcelerometro(double x, double y, double z) async {
+    final db = await database;
+    await db.insert('acelerometro', {'x': x, 'y': y, 'z': z});
+  }
+
+  Future<void> inserirGiroscopio(double x, double y, double z) async {
+    final db = await database;
+    await db.insert('giroscopio', {'x': x, 'y': y, 'z': z});
+  }
+
+  Future<void> inserirLocalizacao(double lat, double lon) async {
+    final db = await database;
+    await db.insert('localizacao', {'latitude': lat, 'longitude': lon});
+  }
+}
