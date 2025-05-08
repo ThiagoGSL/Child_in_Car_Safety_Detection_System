@@ -1,0 +1,122 @@
+import 'package:flutter/material.dart';
+import 'dart:async';
+import 'package:sensors_plus/sensors_plus.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'Database_helper.dart';
+
+void main() => runApp(MyApp());
+
+class MyApp extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      home: SensorPage(),
+    );
+  }
+}
+
+class SensorPage extends StatefulWidget {
+  @override
+  _SensorPageState createState() => _SensorPageState();
+}
+
+class _SensorPageState extends State<SensorPage> {
+  String _accelerometer = 'Accel\nX: 0.00\nY: 0.00\nZ: 0.00';
+  String _gyroscope = 'Gyro\nX: 0.00\nY: 0.00\nZ: 0.00';
+  String _location = 'Lat: 0.000000\nLon: 0.000000';
+
+  double ax = 0, ay = 0, az = 0;
+  double gx = 0, gy = 0, gz = 0;
+  double lat = 0, lon = 0;
+
+  late Timer _timer;
+  final dbHelper = DatabaseHelper();
+
+  @override
+  void initState() {
+    super.initState();
+    _listenToSensors();
+    _requestPermissionAndStartLocation();
+  }
+
+  void _listenToSensors() {
+    accelerometerEvents.listen((event) {
+      setState(() {
+        ax = event.x;
+        ay = event.y;
+        az = event.z;
+
+        _accelerometer = 'Accel\nX: ${event.x.toStringAsFixed(2)}\n'
+            'Y: ${event.y.toStringAsFixed(2)}\nZ: ${event.z.toStringAsFixed(2)}';
+      });
+    });
+
+    gyroscopeEvents.listen((event) {
+      setState(() {
+        gx = event.x;
+        gy = event.y;
+        gz = event.z;
+
+        _gyroscope = 'Gyro\nX: ${event.x.toStringAsFixed(2)}\n'
+            'Y: ${event.y.toStringAsFixed(2)}\nZ: ${event.z.toStringAsFixed(2)}';
+      });
+    });
+  }
+
+  Future<void> _requestPermissionAndStartLocation() async {
+    var status = await Permission.location.request();
+    if (status.isGranted) {
+      Geolocator.getPositionStream(
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.high,
+          distanceFilter: 5,
+          timeLimit: Duration(seconds: 180),
+        ),
+      ).listen((Position position) {
+        setState(() {
+          lat = position.latitude;
+          lon = position.longitude;
+          _location = 'Lat: ${position.latitude.toStringAsFixed(6)}\n'
+              'Lon: ${position.longitude.toStringAsFixed(6)}';
+        });
+      });
+    }
+  }
+
+  void _startTimer() {
+    _timer = Timer.periodic(Duration(seconds: 5), (timer) async {
+      await dbHelper.inserirAcelerometro(ax, ay, az);
+      await dbHelper.inserirGiroscopio(gx, gy, gz);
+      await dbHelper.inserirLocalizacao(lat, lon);
+      print('Dados armazenados');
+
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer.cancel();
+    super.dispose();
+  }
+
+  @override
+
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: Text('Sensores e GPS')),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          children: [
+            Text(_accelerometer, style: TextStyle(fontSize: 18)),
+            SizedBox(height: 20),
+            Text(_gyroscope, style: TextStyle(fontSize: 18)),
+            SizedBox(height: 20),
+            Text(_location, style: TextStyle(fontSize: 18)),
+          ],
+        ),
+      ),
+    );
+  }
+}
