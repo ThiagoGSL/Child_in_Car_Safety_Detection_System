@@ -1,3 +1,5 @@
+//Código para tirar foto e enviar via ble, porém não sabemos ainda como ver o arquivo enviado
+
 #include <BLEDevice.h>
 #include <BLEServer.h>
 #include <BLEUtils.h>
