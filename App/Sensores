@@ -3,7 +3,8 @@ import 'dart:async';
 import 'package:sensors_plus/sensors_plus.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'Database_helper.dart'; // Verifique se este é o caminho correto
+import 'package:geolocator/geolocator.dart' as geo;
+import 'Database_helper.dart';
 
 void main() => runApp(MyApp());
 
@@ -22,23 +23,25 @@ class SensorPage extends StatefulWidget {
 }
 
 class _SensorPageState extends State<SensorPage> {
-  String _accelerometer = 'Accel\nX: 0.00\nY: 0.00'; // String corrigida
-  String _gyroscope = 'Gyro\nX: 0.00\nY: 0.00'; // String corrigida
+  String _accelerometer = 'Accel\nX: 0.00\nY: 0.00';
+  String _gyroscope = 'Gyro\nX: 0.00\nY: 0.00';
   String _location = 'Lat: 0.000000\nLon: 0.000000';
   double ax = 0, ay = 0;
   double gx = 0, gy = 0;
   double lat = 0, lon = 0;
+  double _lastLat = 0, _lastLon = 0;
   late Timer _timer;
   final dbHelper = DatabaseHelper();
-  int _zerosParado = 0;
-  final int _limiteParado = 6;
+  int _unchangedLocationCount = 0;
+  final int _maxUnchangedLocations = 3; // Número máximo de leituras sem mudança antes de parar
+  final double _minLocationChange = 0.0001; // Mudança mínima significativa em graus (≈11 metros)
 
   @override
   void initState() {
     super.initState();
     _listenToSensors();
     _requestPermissionAndStartLocation();
-    _startTimer(); // Adicionado para iniciar o timer
+    _startTimer();
   }
 
   void _listenToSensors() {
@@ -46,9 +49,7 @@ class _SensorPageState extends State<SensorPage> {
       setState(() {
         ax = event.x;
         ay = event.y;
-
-        _accelerometer = 'Accel\nX: ${event.x.toStringAsFixed(2)}\n'
-            'Y: ${event.y.toStringAsFixed(2)}';
+        _accelerometer = 'Accel\nX: ${event.x.toStringAsFixed(2)}\nY: ${event.y.toStringAsFixed(2)}';
       });
     });
 
@@ -56,9 +57,7 @@ class _SensorPageState extends State<SensorPage> {
       setState(() {
         gx = event.x;
         gy = event.y;
-
-        _gyroscope = 'Gyro\nX: ${event.x.toStringAsFixed(2)}\n'
-            'Y: ${event.y.toStringAsFixed(2)}';
+        _gyroscope = 'Gyro\nX: ${event.x.toStringAsFixed(2)}\nY: ${event.y.toStringAsFixed(2)}';
       });
     });
   }
@@ -76,39 +75,120 @@ class _SensorPageState extends State<SensorPage> {
         setState(() {
           lat = position.latitude;
           lon = position.longitude;
-          _location = 'Lat: ${position.latitude.toStringAsFixed(6)}\n'
-              'Lon: ${position.longitude.toStringAsFixed(6)}';
+          _location = 'Lat: ${position.latitude.toStringAsFixed(6)}\nLon: ${position.longitude.toStringAsFixed(6)}';
         });
       });
     }
   }
 
+  // Verifica se a localização mudou significativamente em relação à última registrada
+  bool _hasLocationChangedSignificantly() {
+    // Calcula a diferença absoluta entre a posição atual e a última registrada
+    double latDiff = (lat - _lastLat).abs();
+    double lonDiff = (lon - _lastLon).abs();
+
+    // Retorna true se qualquer uma das diferenças for maior que o limite mínimo
+    return latDiff > _minLocationChange || lonDiff > _minLocationChange;
+  }
+
+  bool _isCollectingData = true;
+  Timer? _locationMonitorTimer;
+
   void _startTimer() {
     _timer = Timer.periodic(Duration(seconds: 5), (timer) async {
-      bool acelezero = ax == 0.0 && ay == 0.0;
-
-      if (acelezero) {
-        _zerosParado++;
-        print('Verificação de parado número: ($_zerosParado) ');
-
-        if (_zerosParado >= _limiteParado) {
-          timer.cancel();
-          print('Coleta de dados encerrada');
-        }
-      } else {
-        _zerosParado = 0; // Movido para dentro do else
+      if (!_isCollectingData) {
+        return; // Não coleta dados quando a coleta estiver pausada
       }
 
+      // Verifica se a localização mudou significativamente
+      bool locationChanged = _hasLocationChangedSignificantly();
+
+      if (!locationChanged) {
+        _unchangedLocationCount++;
+        print('Localização não mudou significativamente ($_unchangedLocationCount/$_maxUnchangedLocations)');
+
+        if (_unchangedLocationCount >= _maxUnchangedLocations) {
+          _isCollectingData = false; // Pausa a coleta de dados
+          print('Coleta de dados pausada - Localização estável por muito tempo');
+          _showAlert('Coleta pausada', 'O dispositivo não se moveu significativamente nas últimas leituras.');
+
+          // Inicia um timer para monitorar mudanças na localização e reiniciar a coleta
+          _startLocationMonitor();
+          return;
+        }
+      } else {
+        _unchangedLocationCount = 0;
+        print('Localização mudou significativamente - continuando coleta');
+      }
+
+      // Atualiza a última localização conhecida
+      _lastLat = lat;
+      _lastLon = lon;
+
+      // Armazena os dados
       await dbHelper.inserirAcelerometro(ax, ay);
       await dbHelper.inserirGiroscopio(gx, gy);
       await dbHelper.inserirLocalizacao(lat, lon);
-      print('Dados armazenados');
+      print('Dados armazenados - Lat: $lat, Lon: $lon');
     });
+  }
+
+  void _startLocationMonitor() {
+    // Cancela o timer de monitoramento anterior se existir
+    _locationMonitorTimer?.cancel();
+
+    // Cria um novo timer que verifica periodicamente se houve mudança significativa de localização
+    _locationMonitorTimer = Timer.periodic(Duration(seconds: 3), (timer) {
+      // Armazena os valores atuais para comparação
+      double currentLat = lat;
+      double currentLon = lon;
+
+      // Calcula a diferença com a última posição registrada
+      double latDiff = (currentLat - _lastLat).abs();
+      double lonDiff = (currentLon - _lastLon).abs();
+
+      print('Monitorando: Diferença Lat: $latDiff, Lon: $lonDiff');
+
+      // Se houver uma mudança significativa, reinicia a coleta
+      if (latDiff > _minLocationChange || lonDiff > _minLocationChange) {
+        print('Movimento detectado! Reiniciando coleta de dados.');
+        _showAlert('Coleta reiniciada', 'Movimento detectado - a coleta de dados foi reiniciada.');
+
+        // Reinicia o contador e a coleta
+        _unchangedLocationCount = 0;
+        _isCollectingData = true;
+
+        // Atualiza os valores de última localização
+        _lastLat = currentLat;
+        _lastLon = currentLon;
+
+        // Cancela este timer de monitoramento
+        timer.cancel();
+        _locationMonitorTimer = null;
+      }
+    });
+  }
+
+  void _showAlert(String title, String message) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(title),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text('OK'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
   void dispose() {
     _timer.cancel();
+    _locationMonitorTimer?.cancel();
     super.dispose();
   }
 
@@ -125,6 +205,29 @@ class _SensorPageState extends State<SensorPage> {
             Text(_gyroscope, style: TextStyle(fontSize: 18)),
             SizedBox(height: 20),
             Text(_location, style: TextStyle(fontSize: 18)),
+            SizedBox(height: 20),
+            Text(
+              _isCollectingData
+                  ? 'Status: Coletando dados'
+                  : 'Status: Coleta pausada (aguardando movimento)',
+              style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: _isCollectingData ? Colors.green : Colors.red
+              ),
+            ),
+            SizedBox(height: 30),
+            ElevatedButton(
+              onPressed: () {
+                print("Estado atual:");
+                print("Localização: Lat: $lat, Lon: $lon");
+                print("Última localização: Lat: $_lastLat, Lon: $_lastLon");
+                print("Localização mudou? ${_hasLocationChangedSignificantly()}");
+                print("Contagem sem mudanças: $_unchangedLocationCount");
+                print("Coletando dados: $_isCollectingData");
+              },
+              child: Text('Verificar Estado'),
+            ),
           ],
         ),
       ),
