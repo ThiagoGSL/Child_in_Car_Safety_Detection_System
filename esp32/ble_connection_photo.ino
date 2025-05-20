@@ -117,14 +117,37 @@ void setup() {
 }
 
 void loop() {
+  static unsigned long lastSendTime = 0;
+  unsigned long currentTime = millis();
+
   if (deviceConnected) {
-    delay(3000);
-    camera_fb_t* fb = esp_camera_fb_get();
-    if (fb) {
-      send_photo(fb);
-      send_child(child);
-      esp_camera_fb_return(fb);
-    } else {
+    // Envia uma foto a cada 15 segundos
+    if (currentTime - lastSendTime >= 15000) {
+      camera_fb_t* fb = esp_camera_fb_get();
+      if (fb) {
+        Serial.printf("Enviando foto... Tamanho: %d bytes
+", fb->len);
+        send_photo(fb);
+        send_child(child);
+        esp_camera_fb_return(fb);
+      } else {
+        Serial.println("Falha ao capturar imagem");
+      }
+      lastSendTime = currentTime;
+    }
+  }
+
+  // Gerencia reconexão BLE
+  if (!deviceConnected && oldDeviceConnected) {
+    oldDeviceConnected = deviceConnected;
+    pServer->startAdvertising();
+    Serial.println("Reiniciando advertising");
+  }
+  if (deviceConnected && !oldDeviceConnected) {
+    oldDeviceConnected = deviceConnected;
+    Serial.println("Device Connected");
+  }
+} else {
       Serial.println("Falha ao capturar imagem");
     }
   }
