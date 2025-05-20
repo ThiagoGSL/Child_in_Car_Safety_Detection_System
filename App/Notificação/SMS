@@ -1,1 +1,92 @@
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+void main() {
+  runApp(const SmsApp());
+}
+
+class SmsApp extends StatelessWidget {
+  const SmsApp({super.key});
+  @override
+  Widget build(BuildContext context) => const MaterialApp(home: SmsHome());
+}
+
+class SmsHome extends StatefulWidget {
+  const SmsHome({super.key});
+  @override
+  State<SmsHome> createState() => _SmsHomeState();
+}
+
+class _SmsHomeState extends State<SmsHome> {
+  static const _channel = MethodChannel('com.seuapp.sms/send');
+  String _number = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadNumber();
+    _requestSmsPermission();
+  }
+
+  Future<void> _loadNumber() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() => _number = prefs.getString('emergencyNumber') ?? '');
+  }
+
+  Future<void> _requestSmsPermission() async {
+    await Permission.sms.request(); // permission_handler v12.0.0+1 :contentReference[oaicite:3]{index=3}
+  }
+
+  Future<void> _saveNumber(String num) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('emergencyNumber', num);
+    setState(() => _number = num);
+  }
+
+  Future<void> _sendSmsAlert() async {
+    if (_number.isEmpty) return;
+    try {
+      final result = await _channel.invokeMethod<String>(
+        'sendSms',
+        {'number': _number, 'message': '🚨 Alerta de perigo! Verifique agora.'},
+      );
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(result == 'SMS_ENVIADO' ? 'SMS enviado!' : 'Falha no envio')),
+      );
+    } on PlatformException catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Erro: ${e.message}')),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('SMS de Emergência')),
+      body: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(children: [
+          TextField(
+            decoration: const InputDecoration(
+              labelText: 'Número de emergência',
+              hintText: '+5511999998888',
+            ),
+            keyboardType: TextInputType.phone,
+            onSubmitted: _saveNumber,
+          ),
+          const SizedBox(height: 20),
+          Text('Salvo: $_number'),
+          const Spacer(),
+          ElevatedButton(
+            onPressed: _sendSmsAlert,
+            child: const Text('Enviar SMS de Alerta'),
+          ),
+        ]),
+      ),
+    );
+  }
+}
 
