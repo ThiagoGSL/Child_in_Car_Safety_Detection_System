@@ -1,0 +1,252 @@
+import 'dart:async';
+import 'package:flutter/material.dart';
+import 'package:awesome_notifications/awesome_notifications.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:timezone/data/latest_all.dart' as tz;
+import 'package:shared_preferences/shared_preferences.dart';
+
+/// Callback global para ações de notificação.
+/// Grava o flag e cancela a notificação de alerta (ID 1).
+@pragma('vm:entry-point')
+Future<void> onActionReceivedMethod(ReceivedAction action) async {
+  if (action.buttonKeyPressed == 'CONFIRM_OK') {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('checkinConfirmed', true);
+    await AwesomeNotifications().cancel(1);
+  }
+}
+
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  tz.initializeTimeZones();
+  await Permission.notification.request();
+
+  // Inicializa o plugin e canais
+  await AwesomeNotifications().initialize(
+    null, // @mipmap/ic_launcher
+    [
+      NotificationChannel(
+        channelKey: 'checkin_channel',
+        channelName: 'Check-In',
+        channelDescription: 'Canal de check-in',
+        importance: NotificationImportance.High,
+        playSound: true,
+      ),
+      NotificationChannel(
+        channelKey: 'alert_channel',
+        channelName: 'Alerta de Perigo',
+        channelDescription: 'Canal de alerta',
+        importance: NotificationImportance.Max,
+        playSound: true,
+      ),
+    ],
+    debug: true,
+  );
+
+  // Registra o handler global
+  AwesomeNotifications().setListeners(
+    onActionReceivedMethod: onActionReceivedMethod,
+  );
+
+  runApp(const MyApp());
+}
+
+class MyApp extends StatelessWidget {
+  const MyApp({super.key});
+  @override
+  Widget build(BuildContext context) => const MaterialApp(home: HomePage());
+}
+
+enum CheckinStatus { idle, pending, confirmed, timeout }
+
+class HomePage extends StatefulWidget {
+  const HomePage({super.key});
+  @override
+  State<HomePage> createState() => _HomePageState();
+}
+
+class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
+  Timer? _parkedTimer, _alertTimer;
+  int _checkinSeconds = 0, _alertSeconds = 0;
+  bool _carStopped = false;
+  CheckinStatus _status = CheckinStatus.idle;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _restoreStatus(); // lê flag e, se confirmado, atualiza UI
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _parkedTimer?.cancel();
+    _alertTimer?.cancel();
+    super.dispose();
+  }
+
+  // Quando o app volta ao foreground, cheque se o botão foi clicado
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _checkForConfirmation();
+    }
+  }
+
+  Future<void> _restoreStatus() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (prefs.getBool('checkinConfirmed') ?? false) {
+      // se já confirmado, atualiza UI
+      setState(() => _status = CheckinStatus.confirmed);
+      prefs.remove('checkinConfirmed');
+    }
+  }
+
+  Future<void> _checkForConfirmation() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (prefs.getBool('checkinConfirmed') ?? false) {
+      prefs.remove('checkinConfirmed');
+      _confirmCheckin();
+    }
+  }
+
+  void _confirmCheckin() {
+    // Cancela timers
+    _parkedTimer?.cancel();
+    _alertTimer?.cancel();
+    // Cancela notificação de alerta
+    AwesomeNotifications().cancel(1);
+    setState(() => _status = CheckinStatus.confirmed);
+  }
+
+  void _onCarStopped() {
+    _resetAll();
+    setState(() {
+      _carStopped = true;
+      _status = CheckinStatus.pending;
+      _checkinSeconds = 30;
+    });
+    _parkedTimer = Timer.periodic(const Duration(seconds: 1), (t) {
+      if (_checkinSeconds > 0) {
+        setState(() => _checkinSeconds--);
+      } else {
+        t.cancel();
+        _showCheckinNotification();
+      }
+    });
+  }
+
+  void _onCarMoving() {
+    _resetAll();
+    setState(() {
+      _carStopped = false;
+      _status = CheckinStatus.idle;
+    });
+  }
+
+  void _resetAll() {
+    _parkedTimer?.cancel();
+    _alertTimer?.cancel();
+    setState(() {
+      _checkinSeconds = 0;
+      _alertSeconds = 0;
+    });
+    AwesomeNotifications().cancelAll();
+  }
+
+  Future<void> _showCheckinNotification() async {
+    if (_status != CheckinStatus.pending) return;
+    await AwesomeNotifications().createNotification(
+      content: NotificationContent(
+        id: 0,
+        channelKey: 'checkin_channel',
+        title: '⚠️ Carro parado',
+        body: 'Seu carro está parado há 30 s. Tudo OK?',
+      ),
+      actionButtons: [
+        NotificationActionButton(key: 'CONFIRM_OK', label: 'Tudo OK?'),
+      ],
+    );
+    _startAlertCountdown();
+  }
+
+  void _startAlertCountdown() {
+    if (_status != CheckinStatus.pending) return;
+    setState(() => _alertSeconds = 30);
+    _alertTimer = Timer.periodic(const Duration(seconds: 1), (t) {
+      if (_alertSeconds > 0) {
+        setState(() => _alertSeconds--);
+      } else {
+        t.cancel();
+        setState(() => _status = CheckinStatus.timeout);
+        _showDangerNotification();
+      }
+    });
+  }
+
+  Future<void> _showDangerNotification() async {
+    await AwesomeNotifications().createNotification(
+      content: NotificationContent(
+        id: 1,
+        channelKey: 'alert_channel',
+        title: '🚨 Bebê em perigo!',
+        body: 'Nenhuma resposta. Alerta enviado.',
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext ctx) {
+    final labels = {
+      CheckinStatus.idle: '—',
+      CheckinStatus.pending: 'Aguardando resposta',
+      CheckinStatus.confirmed: 'Confirmado: Tudo OK',
+      CheckinStatus.timeout: 'Não confirmado: Alerta enviado',
+    };
+    final colors = {
+      CheckinStatus.idle: Colors.grey,
+      CheckinStatus.pending: Colors.orange,
+      CheckinStatus.confirmed: Colors.green,
+      CheckinStatus.timeout: Colors.red,
+    };
+
+    return Scaffold(
+      appBar: AppBar(title: const Text('Dashboard Notificações')),
+      body: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(children: [
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: _carStopped ? Colors.green : Colors.grey,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Text(
+              _carStopped ? '🚗 Carro parado' : '🛣️ Carro em movimento',
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: Colors.white, fontSize: 18),
+            ),
+          ),
+          const SizedBox(height: 20),
+          ElevatedButton(onPressed: _onCarStopped, child: const Text('Parar carro')),
+          const SizedBox(height: 10),
+          ElevatedButton(onPressed: _onCarMoving, child: const Text('Movimentar carro')),
+          const SizedBox(height: 20),
+          if (_checkinSeconds > 0) Text('⏱️ Check-in em: $_checkinSeconds s'),
+          if (_alertSeconds > 0)
+            Text('⏱️ Alerta em: $_alertSeconds s', style: const TextStyle(color: Colors.red)),
+          const SizedBox(height: 20),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            decoration:
+            BoxDecoration(color: colors[_status], borderRadius: BorderRadius.circular(8)),
+            child: Text(labels[_status]!, textAlign: TextAlign.center, style: const TextStyle(color: Colors.white)),
+          ),
+        ]),
+      ),
+    );
+  }
+}
