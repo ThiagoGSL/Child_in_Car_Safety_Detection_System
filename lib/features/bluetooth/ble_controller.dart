@@ -12,6 +12,7 @@ class BluetoothController extends GetxController {
 
   var isConnected = false.obs;
   var isScanning = false.obs;
+  var isConnecting = false.obs;  // estado de conexão em progresso
   var connectedDeviceName = ''.obs;
   var foundDevices = <DiscoveredDevice>[].obs;
 
@@ -45,21 +46,23 @@ class BluetoothController extends GetxController {
   }
 
   void startScan() async {
+    if (isScanning.value) return;
     if (!await _checkPermissions()) return;
+
     foundDevices.clear();
     isScanning.value = true;
 
     _scanSub?.cancel();
     _scanSub = flutterReactiveBle
-      .scanForDevices(withServices: [], scanMode: ScanMode.lowLatency)
-      .listen((device) {
-        if (!foundDevices.any((d) => d.id == device.id)) {
-          foundDevices.add(device);
-        }
-      }, onError: (e) {
-        print('Erro scan: $e');
-        isScanning.value = false;
-      });
+        .scanForDevices(withServices: [], scanMode: ScanMode.lowLatency)
+        .listen((device) {
+      if (!foundDevices.any((d) => d.id == device.id)) {
+        foundDevices.add(device);
+      }
+    }, onError: (e) {
+      print('Erro scan: $e');
+      isScanning.value = false;
+    });
 
     Future.delayed(const Duration(seconds: 10), stopScan);
   }
@@ -70,31 +73,60 @@ class BluetoothController extends GetxController {
   }
 
   void connectToDevice(DiscoveredDevice device) {
+    if (isConnecting.value || isConnected.value) return;
+
     stopScan();
+    isConnecting.value = true;
     connectedDeviceName.value = device.name;
 
     _connSub?.cancel();
     _connSub = flutterReactiveBle
-      .connectToDevice(
-        id: device.id,
-        servicesWithCharacteristicsToDiscover: {
-          serviceUuid: [photoCharUuid, childCharUuid]
-        },
-        connectionTimeout: const Duration(seconds: 10),
-      )
-      .listen((state) {
-        if (state.connectionState == DeviceConnectionState.connected) {
-          print('🔗 Conectado ao ${device.name}');
-          isConnected.value = true;
-          _subscribeToCharacteristics(device.id);
-        } else if (state.connectionState == DeviceConnectionState.disconnected) {
-          print('❌ Desconectado de ${device.name}');
-          isConnected.value = false;
+        .connectToDevice(
+          id: device.id,
+          servicesWithCharacteristicsToDiscover: {
+            serviceUuid: [photoCharUuid, childCharUuid]
+          },
+          connectionTimeout: const Duration(seconds: 10),
+        )
+        .listen((state) async {
+      if (state.connectionState == DeviceConnectionState.connected) {
+        print('🔗 Conectado ao ${device.name}');
+        
+        // Solicitar MTU 200 aqui:
+        try {
+          final mtu = await flutterReactiveBle.requestMtu(deviceId: device.id, mtu: 200);
+          print('MTU negociado: $mtu');
+        } catch (e) {
+          print('Erro ao solicitar MTU: $e');
         }
-      }, onError: (e) {
-        print('Erro conexão: $e');
+
+        isConnected.value = true;
+        isConnecting.value = false;
+        _subscribeToCharacteristics(device.id);
+      } else if (state.connectionState == DeviceConnectionState.disconnected) {
+        print('❌ Desconectado de ${device.name}');
         isConnected.value = false;
-      });
+        isConnecting.value = false;
+        connectedDeviceName.value = '';
+      }
+    }, onError: (e) {
+      print('Erro conexão: $e');
+      isConnected.value = false;
+      isConnecting.value = false;
+      connectedDeviceName.value = '';
+    });
+  }
+
+  void disconnect() {
+    _connSub?.cancel();
+    _photoSub?.cancel();
+    _childSub?.cancel();
+    isConnected.value = false;
+    isConnecting.value = false;
+    connectedDeviceName.value = '';
+    receivedImage.value = null;
+    childDetected.value = false;
+    print('🔌 Desconectado manualmente');
   }
 
   void _subscribeToCharacteristics(String deviceId) {
@@ -103,59 +135,58 @@ class BluetoothController extends GetxController {
     _imageBuffer.clear();
     _receivingImage = false;
 
-    // 1) Foto
     _photoSub = flutterReactiveBle
-      .subscribeToCharacteristic(QualifiedCharacteristic(
-        deviceId: deviceId,
-        serviceId: serviceUuid,
-        characteristicId: photoCharUuid,
-      ))
-      .listen((chunk) {
-        // Debug: cada fragmento recebido
-        print('📦 Chunk recebido: ${chunk.length} bytes');
+        .subscribeToCharacteristic(QualifiedCharacteristic(
+          deviceId: deviceId,
+          serviceId: serviceUuid,
+          characteristicId: photoCharUuid,
+        ))
+        .listen((chunk) {
+      print('📦 Chunk recebido: ${chunk.length} bytes');
 
-        // Detecta início JPEG (0xFF 0xD8)
-        if (!_receivingImage) {
-          for (int i = 0; i < chunk.length - 1; i++) {
-            if (chunk[i] == 0xFF && chunk[i + 1] == 0xD8) {
-              print('▶️ Início do JPEG detectado no chunk');
-              _receivingImage = true;
-              _imageBuffer.clear();
-              break;
-            }
+      // Detecta múltiplos SOI e reinicia o buffer no início de cada imagem
+      for (int i = 0; i < chunk.length - 1; i++) {
+        if (chunk[i] == 0xFF && chunk[i + 1] == 0xD8) {
+          print('▶️ Início do JPEG detectado - reiniciando buffer');
+          _receivingImage = true;
+          _imageBuffer.clear();
+          _imageBuffer.add(chunk[i]);
+          _imageBuffer.add(chunk[i + 1]);
+          if (i + 2 < chunk.length) {
+            _imageBuffer.addAll(chunk.sublist(i + 2));
+          }
+          return; // Processou esse chunk; sai do loop
+        }
+      }
+
+      if (_receivingImage) {
+        _imageBuffer.addAll(chunk);
+
+        // Verifica fim do JPEG
+        for (int i = 0; i < _imageBuffer.length - 1; i++) {
+          if (_imageBuffer[i] == 0xFF && _imageBuffer[i + 1] == 0xD9) {
+            print('🔚 Fim do JPEG detectado');
+            final data = Uint8List.fromList(_imageBuffer);
+            receivedImage.value = data;
+            print('✅ Imagem recebida: ${data.length} bytes');
+            _receivingImage = false;
+            _imageBuffer.clear();
+            break;
           }
         }
+      }
+    }, onError: (e) => print('Erro foto: $e'));
 
-        if (_receivingImage) {
-          _imageBuffer.addAll(chunk);
-
-          // Detecta fim JPEG (0xFF 0xD9)
-          for (int i = 0; i < _imageBuffer.length - 1; i++) {
-            if (_imageBuffer[i] == 0xFF && _imageBuffer[i + 1] == 0xD9) {
-              print('🔚 Fim do JPEG detectado, montando imagem');
-              final data = Uint8List.fromList(_imageBuffer);
-              receivedImage.value = data;
-              print('✅ Imagem completa recebida: ${data.length} bytes');
-              _receivingImage = false;
-              _imageBuffer.clear();
-              return;
-            }
-          }
-        }
-      }, onError: (e) => print('Erro foto: $e'));
-
-    // 2) Boolean CHILD
     _childSub = flutterReactiveBle
-      .subscribeToCharacteristic(QualifiedCharacteristic(
-        deviceId: deviceId,
-        serviceId: serviceUuid,
-        characteristicId: childCharUuid,
-      ))
-      .listen((data) {
-        var str = String.fromCharCodes(data);
-        childDetected.value = str.toLowerCase() == 'true' || str == '1';
-        print('👶 Criança detectada: ${childDetected.value}');
-      }, onError: (e) => print('Erro bool: $e'));
+        .subscribeToCharacteristic(QualifiedCharacteristic(
+          deviceId: deviceId,
+          serviceId: serviceUuid,
+          characteristicId: childCharUuid,
+        ))
+        .listen((data) {
+      var str = String.fromCharCodes(data);
+      childDetected.value = str.toLowerCase() == 'true' || str == '1';
+    }, onError: (e) => print('Erro bool: $e'));
   }
 
   @override

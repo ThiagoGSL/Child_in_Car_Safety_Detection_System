@@ -1,3 +1,4 @@
+import 'package:app_v0/features/bluetooth/ble_controller.dart';
 import 'package:app_v0/features/home/components/timeline_tile.dart';
 import 'package:app_v0/features/home/home_page_controller.dart';
 import 'package:flutter/material.dart';
@@ -19,7 +20,7 @@ class HomePage extends StatelessWidget {
               MyTimelineTile(
                 isFirst: true, 
                 isLast: false, 
-                isPast: true, 
+                isPast: BluetoothController().isConnected.value, 
                 eventCard: Text('STATUS DE CONEXAO',
                   style: TextStyle(
                   color: Colors.white
@@ -29,7 +30,7 @@ class HomePage extends StatelessWidget {
               MyTimelineTile(
               isFirst: false, 
               isLast: false, 
-              isPast: true, 
+              isPast: BluetoothController().childDetected.value, 
                 eventCard: Text('RECONHECIMENTO BEBE',
                   style: TextStyle(
                   color: Colors.white,
