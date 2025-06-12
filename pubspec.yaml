@@ -47,6 +47,10 @@ dependencies:
   flutter_reactive_ble: ^5.4.0
   drift_flutter: ^0.2.4
   sqlite3_flutter_libs: ^0.5.32
+  awesome_notifications: ^0.10.1
+  fl_chart: ^0.66.0
+  timezone: ^0.9.2
+
 
 
   # The following adds the Cupertino Icons font to your application.

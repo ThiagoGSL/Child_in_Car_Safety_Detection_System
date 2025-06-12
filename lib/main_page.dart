@@ -34,6 +34,7 @@ class MainPage extends StatelessWidget {
               BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
               BottomNavigationBarItem(icon: Icon(Icons.settings),label: 'Configuração',),
               BottomNavigationBarItem(icon: Icon(Icons.history), label: 'Logs'),
+              BottomNavigationBarItem(icon: Icon(Icons.speed), label: 'Sensores')
             ],
             currentIndex: controller.selectedIndex,
             selectedItemColor: Colors.blue,
