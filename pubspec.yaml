@@ -47,6 +47,7 @@ dependencies:
   flutter_reactive_ble: ^5.4.0
   drift_flutter: ^0.2.4
   sqlite3_flutter_libs: ^0.5.32
+  open_file: ^3.5.10
 
 
   # The following adds the Cupertino Icons font to your application.

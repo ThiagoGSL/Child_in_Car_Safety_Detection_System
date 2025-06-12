@@ -1,6 +1,7 @@
 import 'package:app_v0/features/cadastro/form_page.dart';
 import 'package:app_v0/features/home/home_page.dart';
 import 'package:app_v0/features/bluetooth/ble_page.dart';
+import 'package:app_v0/features/photos/photo_page.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
@@ -10,7 +11,7 @@ class MainPageController extends GetxController {
 
   final List<Widget> widgetOptions = [
     const HomePage(),
-    FormPage(),
+    PhotoPage(),
     BlePage(),
   ];
 

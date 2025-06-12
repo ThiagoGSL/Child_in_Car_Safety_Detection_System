@@ -1,11 +1,15 @@
+import 'package:app_v0/features/bluetooth/ble_controller.dart';
 import 'package:app_v0/features/cadastro/form_controller.dart';
+import 'package:app_v0/features/photos/photo_controller.dart';
 import 'package:app_v0/features/splash/splash_page.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-
 void main() {
   Get.lazyPut<FormController>(() => FormController());
-  runApp(App());
+  Get.lazyPut<BluetoothController>(() => BluetoothController());
+  Get.lazyPut<PhotoController>(() => PhotoController());
+
+  runApp(const App());
 }
 
 class App extends StatelessWidget {
@@ -16,9 +20,8 @@ class App extends StatelessWidget {
     return GetMaterialApp(
       title: 'Meu App',
       theme: ThemeData(primarySwatch: Colors.blue),
-      home: SplashPage(), 
+      home: SplashPage(),
       debugShowCheckedModeBanner: false,
     );
   }
 }
-
