@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 
 class FormPage extends StatelessWidget {
   final _formKey = GlobalKey<FormState>();
+  // O controller é encontrado, pois já foi inicializado no main.dart
   final c = Get.find<FormController>();
 
   FormPage({super.key});
@@ -17,6 +18,7 @@ class FormPage extends StatelessWidget {
     required String? Function(String?) validator,
     TextInputType keyboardType = TextInputType.text,
   }) {
+    // Nenhuma alteração neste widget auxiliar
     return Obx(() {
       if (isEditing.value) {
         return Padding(
@@ -117,106 +119,116 @@ class FormPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(horizontal: 25, vertical: 40),
-      child: Form(
-        key: _formKey,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            const Center(
-              child: Padding(
-                padding: EdgeInsets.only(top: 0, bottom: 20),
-                child: Text(
-                  'Formulário de Cadastro',
-                  style: TextStyle(
-                    fontSize: 26,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.blue,
+    // >>> ESTRUTURA ALTERADA <<<
+    // O conteúdo foi envolvido por um Scaffold para criar uma página completa.
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Cadastro de Usuário'),
+        backgroundColor: Colors.blue,
+        foregroundColor: Colors.white,
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.symmetric(horizontal: 25, vertical: 40),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Seu conteúdo original do formulário permanece aqui, inalterado
+              const Center(
+                child: Padding(
+                  padding: EdgeInsets.only(top: 0, bottom: 20),
+                  child: Text(
+                    'Formulário de Cadastro',
+                    style: TextStyle(
+                      fontSize: 26,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.blue,
+                    ),
                   ),
                 ),
               ),
-            ),
-            const SizedBox(height: 0),
+              const SizedBox(height: 0),
 
-            _buildEditableField(
-              context: context,
-              label: 'Seu Nome',
-              rxVar: c.userName,
-              isEditing: c.editingUserName,
-              validator: (v) => (v == null || v.isEmpty) ? 'Obrigatório' : null,
-            ),
-            _buildEditableField(
-              context: context,
-              label: 'Nome da Criança',
-              rxVar: c.childName,
-              isEditing: c.editingChildName,
-              validator: (v) => (v == null || v.isEmpty) ? 'Obrigatório' : null,
-            ),
-            _buildEditableField(
-              context: context,
-              label: 'E-mail',
-              rxVar: c.email,
-              isEditing: c.editingEmail,
-              keyboardType: TextInputType.emailAddress,
-              validator: (v) =>
-                  (v != null && v.contains('@')) ? null : 'Email inválido',
-            ),
-            _buildEditableField(
-              context: context,
-              label: 'Telefone',
-              rxVar: c.phone,
-              isEditing: c.editingPhone,
-              keyboardType: TextInputType.phone,
-              validator: (v) =>
-                  (v != null && v.length >= 8) ? null : 'Telefone inválido',
-            ),
-            _buildEditableField(
-              context: context,
-              label: 'Nome Contato de Emergência',
-              rxVar: c.emergencyName,
-              isEditing: c.editingEmergencyName,
-              validator: (v) => (v == null || v.isEmpty) ? 'Obrigatório' : null,
-            ),
-            _buildEditableField(
-              context: context,
-              label: 'Telefone de Emergência',
-              rxVar: c.emergencyPhone,
-              isEditing: c.editingEmergencyPhone,
-              keyboardType: TextInputType.phone,
-              validator: (v) =>
-                  (v != null && v.length >= 8) ? null : 'Inválido',
-            ),
+              _buildEditableField(
+                context: context,
+                label: 'Seu Nome',
+                rxVar: c.userName,
+                isEditing: c.editingUserName,
+                validator: (v) => (v == null || v.isEmpty) ? 'Obrigatório' : null,
+              ),
+              _buildEditableField(
+                context: context,
+                label: 'Nome da Criança',
+                rxVar: c.childName,
+                isEditing: c.editingChildName,
+                validator: (v) => (v == null || v.isEmpty) ? 'Obrigatório' : null,
+              ),
+              _buildEditableField(
+                context: context,
+                label: 'E-mail',
+                rxVar: c.email,
+                isEditing: c.editingEmail,
+                keyboardType: TextInputType.emailAddress,
+                validator: (v) =>
+                    (v != null && v.contains('@')) ? null : 'Email inválido',
+              ),
+              _buildEditableField(
+                context: context,
+                label: 'Telefone',
+                rxVar: c.phone,
+                isEditing: c.editingPhone,
+                keyboardType: TextInputType.phone,
+                validator: (v) =>
+                    (v != null && v.length >= 8) ? null : 'Telefone inválido',
+              ),
+              _buildEditableField(
+                context: context,
+                label: 'Nome Contato de Emergência',
+                rxVar: c.emergencyName,
+                isEditing: c.editingEmergencyName,
+                validator: (v) => (v == null || v.isEmpty) ? 'Obrigatório' : null,
+              ),
+              _buildEditableField(
+                context: context,
+                label: 'Telefone de Emergência',
+                rxVar: c.emergencyPhone,
+                isEditing: c.editingEmergencyPhone,
+                keyboardType: TextInputType.phone,
+                validator: (v) =>
+                    (v != null && v.length >= 8) ? null : 'Inválido',
+              ),
 
-            const SizedBox(height: 24),
+              const SizedBox(height: 24),
 
-            ElevatedButton(
-              onPressed: () async {
-                if (_formKey.currentState?.validate() ?? false) {
-                  await c.saveData();
-                  Get.snackbar(
-                    'Sucesso',
-                    'Dados salvos!',
-                    snackPosition: SnackPosition.BOTTOM,
-                    backgroundColor: Colors.blue.withOpacity(0.8),
-                    colorText: Colors.white,
-                  );
-                }
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.blue.shade100,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+              ElevatedButton(
+                onPressed: () async {
+                  if (_formKey.currentState?.validate() ?? false) {
+                    await c.saveData();
+                    Get.snackbar(
+                      'Sucesso',
+                      'Dados salvos!',
+                      snackPosition: SnackPosition.BOTTOM,
+                      backgroundColor: Colors.blue.withOpacity(0.8),
+                      colorText: Colors.white,
+                    );
+                  }
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.blue.shade100,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  padding: const EdgeInsets.symmetric(vertical: 14),
                 ),
-                padding: const EdgeInsets.symmetric(vertical: 14),
+                child: const Text(
+                  'Salvar',
+                  style: TextStyle(color: Colors.blue, fontWeight: FontWeight.bold, fontSize: 16),
+                ),
               ),
-              child: const Text(
-                'Salvar',
-                style: TextStyle(color: Colors.blue, fontWeight: FontWeight.bold, fontSize: 16),
-              ),
-            ),
-            const SizedBox(height: 100),
-          ],
+              const SizedBox(height: 100),
+            ],
+          ),
         ),
       ),
     );
