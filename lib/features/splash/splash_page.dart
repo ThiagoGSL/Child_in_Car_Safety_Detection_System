@@ -24,7 +24,7 @@ class SplashPage extends StatelessWidget {
                 colors: AppColors.blueGradient,
               )
             ),
-            child: Text(
+            child:Text(
               'ForgottenBaby',
               style: AppTextStyles.bigText.copyWith(color: AppColors.white)
               ),

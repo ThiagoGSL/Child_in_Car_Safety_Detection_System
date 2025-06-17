@@ -1,6 +1,8 @@
+import 'package:app_v0/common/constants/app_colors.dart';
 import 'package:app_v0/main_page_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:app_v0/common/constants/app_colors.dart';
 
 class MainPage extends StatelessWidget {
   const MainPage({super.key});
@@ -13,7 +15,7 @@ class MainPage extends StatelessWidget {
         return Scaffold(
           appBar: AppBar(
             title: Text('ForgottenBaby'),
-            backgroundColor: Colors.blue,
+            backgroundColor: Colors.blue[900],
             foregroundColor: Colors.white,
             actions: [
               Row(
@@ -29,7 +31,7 @@ class MainPage extends StatelessWidget {
           body: Center(
             child: controller.widgetOptions.elementAt(controller.selectedIndex),
           ),
-          bottomNavigationBar: BottomNavigationBar(
+          bottomNavigationBar: BottomNavigationBar(backgroundColor: Colors.blue[900] ,
             items: const <BottomNavigationBarItem>[
               BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
               BottomNavigationBarItem(icon: Icon(Icons.settings),label: 'Configuração',),
@@ -37,7 +39,9 @@ class MainPage extends StatelessWidget {
               BottomNavigationBarItem(icon: Icon(Icons.speed), label: 'Sensores')
             ],
             currentIndex: controller.selectedIndex,
-            selectedItemColor: Colors.blue,
+            selectedItemColor: Colors.white,
+            unselectedItemColor: Colors.white.withOpacity(0.7),
+            type: BottomNavigationBarType.fixed,
             onTap: (index) {
               controller.onItemTapped(index);
             },
