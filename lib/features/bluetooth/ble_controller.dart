@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
+import 'package:app_v0/features/notification/notification_controller.dart';
+import 'package:app_v0/features/notification/notification_model.dart';
 import 'package:app_v0/features/photos/photo_controller.dart'; // Verifique se o caminho está correto
 import 'package:flutter/material.dart';
 import 'package:flutter_reactive_ble/flutter_reactive_ble.dart';
@@ -37,6 +39,7 @@ class BluetoothController extends GetxController {
   bool _decodingInProgress = false;
 
   late final PhotoController _photoController;
+  late final NotificationController _notificationController; 
 
   DateTime? _receptionStartTime;
 
@@ -44,6 +47,7 @@ class BluetoothController extends GetxController {
   void onInit() {
     super.onInit();
     _photoController = Get.find<PhotoController>();
+    _notificationController = Get.find<NotificationController>();
     flutterReactiveBle.statusStream.listen((status) {
       print('BLE status: $status');
       if (status == BleStatus.ready) {
@@ -55,7 +59,7 @@ class BluetoothController extends GetxController {
       if (ImageData != null && ImageData.isNotEmpty) {
         Get.snackbar(
           "Foto Recebida!",
-           "Uma nova imagem foi recebida do ESP32CAM",
+           "Uma nova imagem foi recebida do ESP32-CAM",
            snackPosition: SnackPosition.TOP,
            backgroundColor: Colors.green,
            colorText: Colors.white,
@@ -167,6 +171,11 @@ class BluetoothController extends GetxController {
 
         isConnected.value = true;
         isConnecting.value = false;
+
+        _notificationController.addNotification(
+          'Conectado ao dispositivo: ${device.name}',
+          NotificationType.connected,
+        );
         _subscribeToCharacteristics(device.id);
       } else if (state.connectionState == DeviceConnectionState.disconnected) {
         print('❌ Desconectado de ${device.name}');
@@ -187,6 +196,13 @@ class BluetoothController extends GetxController {
     _connSub = null;
     _photoSub = null;
     _childSub = null;
+
+    if (isConnected.value) {
+      _notificationController.addNotification(
+        'Desconectado do dispositivo.',
+        NotificationType.disconnected,
+      );
+    }
 
     isConnected.value = false;
     isConnecting.value = false;
@@ -314,6 +330,11 @@ class BluetoothController extends GetxController {
                   print('🖼️ JPEG decodificado: ${img.width}x${img.height}');
                   receivedImage.value = data;
                   _photoController.saveImage(data);
+
+                  _notificationController.addNotification(
+                    'Nova foto recebida e salva.',
+                    NotificationType.photoReceived,
+                  );
                 } catch (e) {
                   print('❌ Erro na callback de decodificação: $e');
                 } finally {

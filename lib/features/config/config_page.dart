@@ -1,4 +1,5 @@
 import 'package:app_v0/features/cadastro/form_page.dart'; // Importe a FormPage
+import 'package:app_v0/features/photos/photo_page.dart';
 import 'package:app_v0/main_page_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -37,7 +38,7 @@ class ConfigPage extends StatelessWidget {
           title: 'Logs do Sistema',
           subtitle: 'Visualizar logs de eventos e erros',
           onTap: () {
-            Get.snackbar('Em Breve', 'Página de logs ainda não implementada.');
+            Get.to(() => PhotoPage());
           },
         ),
          _buildConfigTile(
