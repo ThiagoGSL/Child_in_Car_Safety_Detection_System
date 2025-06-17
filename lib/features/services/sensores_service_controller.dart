@@ -14,7 +14,7 @@ class VehicleDetectionController {
   final List<double> _accelerationHistory = [];
   final List<double> _locationHistory = [];
   final int _historySize = 10; // History size for analysis
-  final double _movementThreshold = 2.0; // Threshold for detecting acceleration movement
+  final double _movementThreshold = 1.0; // Threshold for detecting acceleration movement
   final double _locationThreshold = 0.1;
 
   double _lastLat = 0;
@@ -99,7 +99,7 @@ class VehicleDetectionController {
   }
 
   void _startDetectionTimer() {
-    _detectionTimer = Timer.periodic(const Duration(seconds: 5), (timer) async {
+    _detectionTimer = Timer.periodic(const Duration(seconds: 0.5), (timer) async {
       // Determine vehicle state
       bool isMoving = _isVehicleMoving();
       VehicleState newState = isMoving ? VehicleState.moving : VehicleState.stopped;
