@@ -99,7 +99,7 @@ class VehicleDetectionController {
   }
 
   void _startDetectionTimer() {
-    _detectionTimer = Timer.periodic(const Duration(seconds: 0.5), (timer) async {
+    _detectionTimer = Timer.periodic(const Duration(seconds: 1), (timer) async {
       // Determine vehicle state
       bool isMoving = _isVehicleMoving();
       VehicleState newState = isMoving ? VehicleState.moving : VehicleState.stopped;
