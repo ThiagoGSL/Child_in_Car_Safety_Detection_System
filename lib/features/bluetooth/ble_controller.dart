@@ -22,7 +22,6 @@ class BluetoothController extends GetxController {
   var connectedDeviceName = ''.obs;
   var foundDevices = <DiscoveredDevice>[].obs;
   
-  // Variável dedicada para o dispositivo conectado
   var connectedDevice = Rx<DiscoveredDevice?>(null);
 
   var receivedImage = Rx<Uint8List?>(null);
@@ -55,10 +54,8 @@ class BluetoothController extends GetxController {
       }
     });
 
-    // Listener para reagir sempre que uma nova imagem for recebida
     ever(receivedImage, (Uint8List? imageData){
       if (imageData != null && imageData.isNotEmpty) {
-        // SNACKBAR MODIFICADA
         Get.snackbar(
           "Foto Recebida!",
            "Uma nova imagem foi salva com sucesso.",
@@ -93,7 +90,6 @@ class BluetoothController extends GetxController {
     print('🏁 Iniciando varredura automática pelo Service UUID: $serviceUuid');
     isScanning.value = true;
     
-    // Não limpa 'foundDevices' aqui para não afetar a UI da BlePage se ela estiver aberta
     _scanSub?.cancel();
     _scanSub = flutterReactiveBle.scanForDevices(
       withServices: [serviceUuid],
@@ -116,7 +112,7 @@ class BluetoothController extends GetxController {
     }
 
     print('🏁 Iniciando varredura MANUAL por todos os dispositivos...');
-    foundDevices.clear(); // Limpa a lista para uma nova busca
+    foundDevices.clear();
     isScanning.value = true;
 
     _scanSub?.cancel();
@@ -179,6 +175,20 @@ class BluetoothController extends GetxController {
           'Conectado ao dispositivo: ${device.name}',
           NotificationType.connected,
         );
+        
+        // NOVO: Exibe SnackBar de conexão bem-sucedida
+        Get.snackbar(
+          'Conectado',
+          'Dispositivo "${device.name}" conectado com sucesso.',
+          snackPosition: SnackPosition.TOP,
+          backgroundColor: const Color(0xFF16213E),
+          colorText: Colors.white,
+          margin: EdgeInsets.zero,
+          borderRadius: 0,
+          icon: const Icon(Icons.check_circle_outline, color: Color(0xFF53BF9D)),
+          snackStyle: SnackStyle.GROUNDED,
+        );
+
         _subscribeToCharacteristics(device.id);
       } else if (state.connectionState == DeviceConnectionState.disconnected) {
         print('❌ Desconectado de ${device.name}');
@@ -200,10 +210,25 @@ class BluetoothController extends GetxController {
     _photoSub = null;
     _childSub = null;
 
+    final String disconnectedDeviceName = connectedDeviceName.value;
+
     if (isConnected.value) {
       _notificationController.addNotification(
         'Desconectado do dispositivo.',
         NotificationType.disconnected,
+      );
+
+      // NOVO: Exibe SnackBar de desconexão
+      Get.snackbar(
+        'Desconectado',
+        'A conexão com "$disconnectedDeviceName" foi encerrada.',
+        snackPosition: SnackPosition.TOP,
+        backgroundColor: const Color(0xFF16213E),
+        colorText: Colors.white,
+        margin: EdgeInsets.zero,
+        borderRadius: 0,
+        icon: Icon(Icons.error_outline, color: Colors.orange.shade600),
+        snackStyle: SnackStyle.GROUNDED,
       );
     }
 

@@ -1,5 +1,3 @@
-import 'dart:math';
-
 import 'package:app_v0/features/cadastro/form_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';

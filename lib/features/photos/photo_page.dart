@@ -10,8 +10,6 @@ class PhotoPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Cor de destaque do tema
-    final Color accentColor = const Color(0xFF53BF9D);
     // Cor de fundo dos cards/dialogs
     final Color tileColor = const Color(0xFF16213E);
 

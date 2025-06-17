@@ -59,20 +59,32 @@ class PhotoController extends GetxController {
       try {
         await lastPhoto.value!.delete();
         lastPhoto.value = null; // Limpa a variável para a UI atualizar.
+        // MODIFICADO: SnackBar de sucesso com a nova identidade visual
         Get.snackbar(
-          'Sucesso', 'A foto foi excluída.',
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: Colors.green,
+          'Sucesso!',
+          'A foto foi excluída.',
+          snackPosition: SnackPosition.TOP,
+          backgroundColor: const Color(0xFF16213E),
           colorText: Colors.white,
+          margin: EdgeInsets.zero,
+          borderRadius: 0,
+          icon: const Icon(Icons.check_circle_outline, color: Color(0xFF53BF9D)),
+          snackStyle: SnackStyle.GROUNDED,
         );
         print('🗑️ Última foto excluída.');
       } catch (e) {
         print('❌ Erro ao excluir a foto: $e');
+        // MODIFICADO: SnackBar de erro com a nova identidade visual
         Get.snackbar(
-          'Erro', 'Não foi possível excluir a foto.',
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: Colors.red,
+          'Erro',
+          'Não foi possível excluir a foto.',
+          snackPosition: SnackPosition.TOP,
+          backgroundColor: const Color(0xFF16213E),
           colorText: Colors.white,
+          margin: EdgeInsets.zero,
+          borderRadius: 0,
+          icon: Icon(Icons.error_outline, color: Colors.red.shade400),
+          snackStyle: SnackStyle.GROUNDED,
         );
       }
     }
