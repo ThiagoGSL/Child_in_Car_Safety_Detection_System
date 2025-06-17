@@ -1,6 +1,8 @@
 import 'package:app_v0/features/bluetooth/ble_page.dart';
-import 'package:app_v0/main_page_controller.dart';
-import 'package:app_v0/features/notification/notification_controller.dart'; // <-- IMPORTANTE: Importar
+import 'package:app_v0/features/notification/notification_controller.dart';
+import 'package:app_v0/features/notification/notification_page.dart';
+import 'package:app_v0/features/photos/photo_page.dart';
+import 'package:app_v0/main_page/main_page_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
@@ -9,19 +11,30 @@ class MainPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final MainPageController controller = Get.put(MainPageController());
-    // <-- MUDANÇA: Instanciar o NotificationController para usar no badge.
+    final MainPageController controller = Get.find<MainPageController>();
     final NotificationController notificationController = Get.find<NotificationController>();
 
     return Scaffold(
       appBar: AppBar(
         leading: Obx(() {
-          if (controller.selectedIndex.value == 2 && controller.showBlePage.value) {
+          // Condição unificada para mostrar o botão de voltar
+          bool shouldShowBack = (controller.selectedIndex.value == 2) && 
+                                (controller.showBlePage.value || controller.showPhotoPage.value);
+
+          if (shouldShowBack) {
             return IconButton(
               icon: const Icon(Icons.arrow_back_ios),
-              onPressed: () => controller.navigateToBlePage(false),
+              onPressed: () {
+                // Determina para qual página voltar
+                if (controller.showBlePage.value) {
+                  controller.navigateToBlePage(false);
+                } else if (controller.showPhotoPage.value) {
+                  controller.navigateToPhotoPage(false);
+                }
+              },
             );
           }
+          // Se não, não mostra nada no leading
           return const SizedBox.shrink();
         }),
         title: Obx(() => FittedBox(
@@ -34,14 +47,22 @@ class MainPage extends StatelessWidget {
         backgroundColor: Colors.blue,
         foregroundColor: Colors.white,
         actions: [
+          // Botão para abrir a página de histórico de notificações
+          IconButton(
+            icon: const Icon(Icons.notifications_outlined),
+            tooltip: 'Notificações',
+            onPressed: () {
+              // Navega para a página de notificações como uma nova tela
+              Get.to(() => NotificationPage());
+            },
+          ),
+          // Ações contextuais (botão de limpar ou status da bateria)
           Obx(() {
-            // Se estiver na aba de notificações, mostra o botão de limpar.
             if (controller.selectedIndex.value == 1) {
               return IconButton(
                 icon: const Icon(Icons.delete_sweep_outlined),
                 tooltip: 'Limpar Histórico',
                 onPressed: () {
-                  // A lógica do diálogo de confirmação agora vive aqui.
                   Get.dialog(AlertDialog(
                     title: const Text('Limpar Histórico?'),
                     content: const Text('Deseja apagar todas as notificações?'),
@@ -60,7 +81,6 @@ class MainPage extends StatelessWidget {
               );
             }
             
-            // Senão, mostra o status da bateria.
             return Row(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -73,9 +93,16 @@ class MainPage extends StatelessWidget {
         ],
       ),
       body: Obx(() {
-        if (controller.selectedIndex.value == 2 && controller.showBlePage.value) {
-          return BlePage();
+        // Lógica para exibir a sub-página correta dentro da aba de Configurações
+        if (controller.selectedIndex.value == 2) {
+          if (controller.showBlePage.value) {
+            return BlePage();
+          }
+          if (controller.showPhotoPage.value) {
+            return PhotoPage();
+          }
         }
+        // Se nenhuma sub-página estiver ativa, mostra a aba principal selecionada
         return Center(
           child: controller.widgetOptions.elementAt(controller.selectedIndex.value),
         );
@@ -83,13 +110,11 @@ class MainPage extends StatelessWidget {
       bottomNavigationBar: Obx(() => BottomNavigationBar(
             items: <BottomNavigationBarItem>[
               const BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-              // <-- MUDANÇA: Ícone de notificações com badge.
               BottomNavigationBarItem(
                 icon: Stack(
                   clipBehavior: Clip.none,
                   children: [
-                    const Icon(Icons.notifications), // Ícone base
-                    // Mostra o badge apenas se houver notificações não lidas.
+                    const Icon(Icons.notifications),
                     if (notificationController.unreadCount.value > 0)
                       Positioned(
                         right: -8,

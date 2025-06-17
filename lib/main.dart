@@ -1,19 +1,13 @@
-import 'package:app_v0/features/bluetooth/ble_controller.dart';
-import 'package:app_v0/features/cadastro/form_controller.dart';
-import 'package:app_v0/features/notification/notification_controller.dart';
-import 'package:app_v0/features/photos/photo_controller.dart';
 import 'package:app_v0/features/splash/splash_page.dart';
+import 'package:app_v0/main_binding.dart'; 
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 void main() {
-
+  // O WidgetsFlutterBinding.ensureInitialized() é importante para garantir
+  // a inicialização de plugins do Flutter antes da execução do app.
   WidgetsFlutterBinding.ensureInitialized();
-  Get.put(NotificationController(), permanent: true);
-  Get.put(PhotoController(), permanent: true);
-  Get.put(FormController(), permanent: true);
-  Get.put(BluetoothController(), permanent: true);
-
+  
   runApp(const App());
 }
 
@@ -25,6 +19,11 @@ class App extends StatelessWidget {
     return GetMaterialApp(
       title: 'Meu App',
       theme: ThemeData(primarySwatch: Colors.blue),
+
+      // Use o initialBinding injeta todas as dependências globais
+      // antes que qualquer tela seja construída.
+      initialBinding: MainBinding(),
+
       home: SplashPage(),
       debugShowCheckedModeBanner: false,
     );

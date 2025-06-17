@@ -1,4 +1,4 @@
-import 'package:app_v0/main_page.dart';
+import 'package:app_v0/main_page/main_page.dart';
 import 'package:get/get.dart';
 
 class SplashPageController extends GetxController {

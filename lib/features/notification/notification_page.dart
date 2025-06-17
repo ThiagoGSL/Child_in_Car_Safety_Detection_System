@@ -1,15 +1,12 @@
 import 'package:app_v0/features/notification/notification_controller.dart';
 import 'package:app_v0/features/notification/notification_model.dart';
+import 'package:app_v0/main_page/main_page_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 
 class NotificationPage extends StatelessWidget {
-  // Este widget não tem 'const' no construtor para ser consistente
-  // com a lista de widgets não-constante no MainPageController.
   NotificationPage({super.key});
-
-  final NotificationController controller = Get.find<NotificationController>();
 
   // Mapeia o tipo de notificação para um ícone e cor específicos.
   Widget _getIconForType(NotificationType type) {
@@ -29,8 +26,9 @@ class NotificationPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Este widget não tem Scaffold ou AppBar próprios.
-    // Ele é o "corpo" que será exibido pela MainPage, que controla a AppBar.
+
+    final NotificationController controller = Get.find<NotificationController>();
+    final MainPageController mainPageController = Get.find<MainPageController>();
     return Obx(() {
       if (controller.notifications.isEmpty) {
         return const Center(
@@ -50,8 +48,12 @@ class NotificationPage extends StatelessWidget {
         itemCount: controller.notifications.length,
         itemBuilder: (context, index) {
           final notification = controller.notifications[index];
-          // Formata a data e hora para exibição, ex: "13:35:40 17/06/2025"
           final formattedTime = DateFormat('HH:mm:ss dd/MM/yyyy').format(notification.timestamp);
+
+          // Determina se a notificação é clicável para mostrar a seta
+          bool isClickable = notification.type == NotificationType.connected ||
+                              notification.type == NotificationType.disconnected ||
+                              notification.type == NotificationType.photoReceived;
 
           return Card(
             margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
@@ -63,6 +65,31 @@ class NotificationPage extends StatelessWidget {
               leading: _getIconForType(notification.type),
               title: Text(notification.message),
               subtitle: Text(formattedTime, style: const TextStyle(fontSize: 12, color: Colors.black54)),
+              // Mostra a seta apenas para itens clicáveis
+              trailing: isClickable ? const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey) : null,
+              // <-- MUDANÇA: Adiciona a lógica de clique (onTap)
+              onTap: () {
+                switch (notification.type) {
+                  // Caso seja uma notificação de conexão ou desconexão...
+                  case NotificationType.connected:
+                  case NotificationType.disconnected:
+                    Get.back(); // 1. Fecha a página de notificações
+                    mainPageController.onItemTapped(2); // 2. Vai para a aba "Configurações"
+                    mainPageController.navigateToBlePage(true); // 3. Mostra a sub-página de Bluetooth
+                    break;
+                  
+                  // Caso seja uma notificação de foto recebida...
+                  case NotificationType.photoReceived:
+                    Get.back(); // 1. Fecha a página de notificações
+                    mainPageController.onItemTapped(2); // 2. Vai para a aba "Configurações"
+                    mainPageController.navigateToPhotoPage(true); // 3. Mostra a sub-página de Logs/Foto
+                    break;
+
+                  // Para outros tipos de notificação, não faz nada.
+                  case NotificationType.info:
+                  case NotificationType.error:
+                }
+              },
             ),
           );
         },

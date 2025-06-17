@@ -1,6 +1,5 @@
-import 'package:app_v0/features/cadastro/form_page.dart'; // Importe a FormPage
-import 'package:app_v0/features/photos/photo_page.dart';
-import 'package:app_v0/main_page_controller.dart';
+import 'package:app_v0/features/cadastro/form_page.dart';
+import 'package:app_v0/main_page/main_page_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
@@ -9,6 +8,7 @@ class ConfigPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Obtém a instância do MainPageController para controlar a navegação
     final mainController = Get.find<MainPageController>();
 
     return ListView(
@@ -19,26 +19,26 @@ class ConfigPage extends StatelessWidget {
           title: 'Conexão Bluetooth',
           subtitle: 'Gerenciar conexão com o dispositivo',
           onTap: () {
-            // Apenas altera o estado para mostrar a página de BLE
+            // Chama o método no controller para mostrar a BlePage
             mainController.navigateToBlePage(true);
           },
         ),
-        // >>> LÓGICA ALTERADA <<<
         _buildConfigTile(
           icon: Icons.person_add_alt_1,
           title: 'Cadastro de Usuário',
           subtitle: 'Editar suas informações de perfil',
           onTap: () {
-            // Navega para a FormPage como uma nova tela
+            // Navega para a FormPage como uma nova tela, pois é um fluxo diferente
             Get.to(() => FormPage());
           },
         ),
         _buildConfigTile(
-          icon: Icons.receipt_long,
-          title: 'Logs do Sistema',
-          subtitle: 'Visualizar logs de eventos e erros',
+          icon: Icons.photo_library,
+          title: 'Fotos Salvas',
+          subtitle: 'Visualizar a última foto recebida',
           onTap: () {
-            Get.to(() => PhotoPage());
+            // Chama o método no controller para mostrar a PhotoPage
+            mainController.navigateToPhotoPage(true);
           },
         ),
          _buildConfigTile(
@@ -53,6 +53,7 @@ class ConfigPage extends StatelessWidget {
     );
   }
 
+  // Widget auxiliar para construir os itens da lista de forma consistente
   Widget _buildConfigTile({
     required IconData icon,
     required String title,
