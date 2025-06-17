@@ -3,7 +3,7 @@ import 'package:app_v0/features/bluetooth/ble_controller.dart';
 import 'package:app_v0/features/cadastro/form_controller.dart';
 import 'package:app_v0/features/notification/notification_controller.dart';
 import 'package:app_v0/features/photos/photo_controller.dart';
-import 'package:app_v0/main_page/main_page_controller.dart';
+import 'package:app_v0/features/main_page/main_page_controller.dart';
 
 class MainBinding implements Bindings {
   @override

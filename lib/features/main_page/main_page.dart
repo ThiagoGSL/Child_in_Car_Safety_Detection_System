@@ -2,7 +2,7 @@ import 'package:app_v0/features/bluetooth/ble_page.dart';
 import 'package:app_v0/features/notification/notification_controller.dart';
 import 'package:app_v0/features/notification/notification_page.dart';
 import 'package:app_v0/features/photos/photo_page.dart';
-import 'package:app_v0/main_page/main_page_controller.dart';
+import 'package:app_v0/features/main_page/main_page_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
