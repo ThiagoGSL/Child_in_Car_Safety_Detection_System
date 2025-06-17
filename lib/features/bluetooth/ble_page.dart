@@ -1,26 +1,43 @@
-import 'dart:typed_data';
 import 'package:app_v0/features/bluetooth/ble_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_reactive_ble/flutter_reactive_ble.dart';
 import 'package:get/get.dart';
 
-class BlePage extends StatelessWidget {
-  BlePage({Key? key}) : super(key: key);
+class BlePage extends StatefulWidget {
+  const BlePage({Key? key}) : super(key: key);
 
+  @override
+  State<BlePage> createState() => _BlePageState();
+}
+
+class _BlePageState extends State<BlePage> {
   final BluetoothController controller = Get.find<BluetoothController>();
 
+  @override
+  void initState() {
+    super.initState();
+    
+    // Inicia a busca por dispositivos disponíveis assim que a página é aberta
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!controller.isScanning.value) {
+         controller.startManualScan();
+      }
+    });
+  }
+
   void _showSnackbar(BuildContext context, String message, {Color? color}) {
-    ScaffoldMessenger.of(Get.context!).hideCurrentSnackBar();
-    ScaffoldMessenger.of(Get.context!).showSnackBar(SnackBar(
+    // Garante que o contexto é válido antes de mostrar a SnackBar
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
       content: Text(message),
       backgroundColor: color ?? Colors.blueGrey,
-      duration: const Duration(seconds: 2),
+      duration: const Duration(seconds: 3),
     ));
   }
 
   @override
   Widget build(BuildContext context) {
-    // O Scaffold foi removido. Este widget é o "conteúdo" a ser exibido.
     return Container(
       color: Colors.blue.shade200,
       child: SafeArea(
@@ -28,12 +45,11 @@ class BlePage extends StatelessWidget {
           children: [
             const SizedBox(height: 20),
 
-            // Dispositivo conectado fixo no topo
+            // Dispositivo conectado 
             Obx(() {
-              if (!controller.isConnected.value) return const SizedBox.shrink();
-              final connectedDevice = controller.foundDevices.firstWhereOrNull(
-                  (d) => d.name == controller.connectedDeviceName.value);
-              if (connectedDevice == null) return const SizedBox.shrink();
+              final device = controller.connectedDevice.value;
+              if (device == null) return const SizedBox.shrink();
+              
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -41,17 +57,18 @@ class BlePage extends StatelessWidget {
                     padding: EdgeInsets.symmetric(horizontal: 8.0),
                     child: Text('Dispositivo Conectado', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white70)),
                   ),
-                  _buildDeviceTile(connectedDevice, true),
+                  _buildDeviceTile(device, true),
                 ],
               );
             }),
             const SizedBox(height: 10),
 
-            // Lista rolável de dispositivos disponíveis
+            // Lista rolável de dispositivos disponíveis 
             Expanded(
               child: Obx(() {
-                final otherDevices = controller.foundDevices.where((d) =>
-                    !controller.isConnected.value || d.name != controller.connectedDeviceName.value).toList();
+                final otherDevices = controller.foundDevices.where((d) => 
+                    d.id != controller.connectedDevice.value?.id).toList();
+
                 if (otherDevices.isEmpty && !controller.isScanning.value) {
                   return const Center(child: Text('Nenhum dispositivo encontrado', style: TextStyle(color: Colors.white70)));
                 }
@@ -76,12 +93,11 @@ class BlePage extends StatelessWidget {
             ),
             const SizedBox(height: 10),
 
-            // Botão procurar dispositivos
             Obx(() {
               return ElevatedButton.icon(
                 onPressed: controller.isScanning.value || controller.isConnecting.value ? null : () {
-                  controller.startScan();
-                  _showSnackbar(context, 'Iniciando busca por dispositivos...');
+                  controller.startManualScan();
+                  _showSnackbar(context, 'Buscando novamente...');
                 },
                 icon: const Icon(Icons.search, color: Colors.blueGrey),
                 label: const Text('Procurar Dispositivos', style: TextStyle(color: Colors.blueGrey)),
@@ -89,35 +105,13 @@ class BlePage extends StatelessWidget {
               );
             }),
             const SizedBox(height: 10),
-
-            // Imagem recebida
-            Obx(() {
-              final Uint8List? imageData = controller.receivedImage.value;
-              if (imageData == null) return const SizedBox.shrink();
-              return Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                child: Column(
-                  children: [
-                    const Text('Imagem Recebida', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
-                    const SizedBox(height: 8),
-                    Container(
-                      decoration: BoxDecoration(color: Colors.white, border: Border.all(color: Colors.white70), borderRadius: BorderRadius.circular(8)),
-                      child: Image.memory(imageData),
-                    ),
-                  ],
-                ),
-              );
-            }),
-            const SizedBox(height: 20),
           ],
         ),
       ),
     );
   }
 
-  // Lógica original do _buildDeviceTile mantida
   Widget _buildDeviceTile(DiscoveredDevice device, bool connected) {
-    final controller = Get.find<BluetoothController>();
     return Card(
       color: connected ? Colors.green.shade300 : Colors.white,
       child: ListTile(
@@ -139,7 +133,9 @@ class BlePage extends StatelessWidget {
                 controller.connectToDevice(device);
                 _showSnackbar(Get.context!, 'Conectando ao dispositivo ${device.name}...');
               },
-              child: controller.isConnecting.value ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation<Color>(Colors.white))) : const Text('Conectar'),
+              child: controller.isConnecting.value && controller.connectedDeviceName.value == device.name
+                  ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation<Color>(Colors.white))) 
+                  : const Text('Conectar'),
             );
           }
         }),

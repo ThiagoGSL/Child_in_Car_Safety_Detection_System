@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 import 'package:app_v0/features/photos/photo_controller.dart'; // Verifique se o caminho está correto
+import 'package:flutter/material.dart';
 import 'package:flutter_reactive_ble/flutter_reactive_ble.dart';
 import 'package:get/get.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -18,6 +19,9 @@ class BluetoothController extends GetxController {
   var isConnecting = false.obs;
   var connectedDeviceName = ''.obs;
   var foundDevices = <DiscoveredDevice>[].obs;
+  
+  // Variável dedicada para o dispositivo conectado
+  var connectedDevice = Rx<DiscoveredDevice?>(null);
 
   var receivedImage = Rx<Uint8List?>(null);
   var childDetected = false.obs;
@@ -34,16 +38,32 @@ class BluetoothController extends GetxController {
 
   late final PhotoController _photoController;
 
-  // DEBUG: Variável para marcar o início da recepção da imagem
   DateTime? _receptionStartTime;
 
   @override
   void onInit() {
     super.onInit();
+    _photoController = Get.find<PhotoController>();
     flutterReactiveBle.statusStream.listen((status) {
       print('BLE status: $status');
+      if (status == BleStatus.ready) {
+        startAutoScan();
+      }
     });
-    _photoController = Get.find<PhotoController>();
+
+    ever(receivedImage, (Uint8List? ImageData){
+      if (ImageData != null && ImageData.isNotEmpty) {
+        Get.snackbar(
+          "Foto Recebida!",
+           "Uma nova imagem foi recebida do ESP32CAM",
+           snackPosition: SnackPosition.TOP,
+           backgroundColor: Colors.green,
+           colorText: Colors.white,
+           margin: const EdgeInsets.all(10),
+           duration: const Duration(seconds: 4),);
+      }
+    });
+  
   }
 
   Future<bool> _checkPermissions() async {
@@ -56,25 +76,51 @@ class BluetoothController extends GetxController {
     return statuses.values.every((s) => s.isGranted);
   }
 
-  void startScan() async {
-    if (isScanning.value) return;
+  void startAutoScan() async {
+    if (isConnected.value || isConnecting.value || isScanning.value) return;
+    if (!await _checkPermissions()) {
+      print('Permissões de Bluetooth e Localização não concedidas.');
+      return;
+    }
+
+    print('🏁 Iniciando varredura automática pelo Service UUID: $serviceUuid');
+    isScanning.value = true;
+    
+    // Não limpa 'foundDevices' aqui para não afetar a UI da BlePage se ela estiver aberta
+    _scanSub?.cancel();
+    _scanSub = flutterReactiveBle.scanForDevices(
+      withServices: [serviceUuid],
+      scanMode: ScanMode.lowLatency,
+    ).listen((device) {
+      print('✅ Dispositivo com o serviço correto encontrado! (${device.name}, ${device.id})');
+      stopScan();
+      connectToDevice(device);
+    }, onError: (e) {
+      print('Erro na varredura automática: $e');
+      isScanning.value = false;
+    });
+  }
+
+  void startManualScan() async {
+    if (isScanning.value || isConnecting.value) return;
     if (!await _checkPermissions()) {
       print('Permissões não concedidas');
       return;
     }
 
-    foundDevices.clear();
+    print('🏁 Iniciando varredura MANUAL por todos os dispositivos...');
+    foundDevices.clear(); // Limpa a lista para uma nova busca
     isScanning.value = true;
 
     _scanSub?.cancel();
-    _scanSub = flutterReactiveBle
-        .scanForDevices(withServices: [], scanMode: ScanMode.lowLatency)
+    _scanSub = flutterReactiveBle.scanForDevices(
+        withServices: [], scanMode: ScanMode.lowLatency)
         .listen((device) {
-      if (!foundDevices.any((d) => d.id == device.id)) {
+      if (device.name.isNotEmpty && !foundDevices.any((d) => d.id == device.id)) {
         foundDevices.add(device);
       }
     }, onError: (e) {
-      print('Erro scan: $e');
+      print('Erro na varredura manual: $e');
       isScanning.value = false;
     });
 
@@ -83,7 +129,9 @@ class BluetoothController extends GetxController {
 
   void stopScan() {
     _scanSub?.cancel();
+    _scanSub = null;
     isScanning.value = false;
+    print('🛑 Varredura parada.');
   }
 
   void connectToDevice(DiscoveredDevice device) {
@@ -91,23 +139,24 @@ class BluetoothController extends GetxController {
 
     stopScan();
     isConnecting.value = true;
-    connectedDeviceName.value = device.name;
+    connectedDeviceName.value = device.name.isNotEmpty ? device.name : device.id;
 
     _connSub?.cancel();
-    _connSub = flutterReactiveBle
-        .connectToDevice(
+    _connSub = flutterReactiveBle.connectToDevice(
       id: device.id,
       servicesWithCharacteristicsToDiscover: {
         serviceUuid: [photoCharUuid, childCharUuid]
       },
-      connectionTimeout: const Duration(seconds: 10),
-    )
-        .listen((state) async {
+      connectionTimeout: const Duration(seconds: 15),
+    ).listen((state) async {
       if (state.connectionState == DeviceConnectionState.connected) {
         print('🔗 Conectado ao ${device.name}');
+        
+        connectedDevice.value = device; 
+        
         try {
           final mtu = await flutterReactiveBle.requestMtu(
-              deviceId: device.id, mtu: 247); // MTU pode ser ajustado
+              deviceId: device.id, mtu: 247);
           print('MTU negociado: $mtu');
           await flutterReactiveBle.requestConnectionPriority(
               deviceId: device.id, priority: ConnectionPriority.highPerformance);
@@ -122,10 +171,12 @@ class BluetoothController extends GetxController {
       } else if (state.connectionState == DeviceConnectionState.disconnected) {
         print('❌ Desconectado de ${device.name}');
         disconnect();
+        Future.delayed(const Duration(seconds: 5), startAutoScan);
       }
     }, onError: (e) {
-      print('Erro conexão: $e');
+      print('Erro na conexão: $e');
       disconnect();
+      Future.delayed(const Duration(seconds: 5), startAutoScan);
     });
   }
 
@@ -133,10 +184,16 @@ class BluetoothController extends GetxController {
     _connSub?.cancel();
     _photoSub?.cancel();
     _childSub?.cancel();
+    _connSub = null;
+    _photoSub = null;
+    _childSub = null;
 
     isConnected.value = false;
     isConnecting.value = false;
     connectedDeviceName.value = '';
+    
+    connectedDevice.value = null; 
+    
     receivedImage.value = null;
     childDetected.value = false;
 
@@ -145,9 +202,10 @@ class BluetoothController extends GetxController {
     _lastByteOfPrevChunk = null;
     _decodingInProgress = false;
 
-    print('🔌 Desconectado manualmente');
+    print('🔌 Conexão encerrada.');
+    Future.delayed(const Duration(seconds: 5), startAutoScan);
   }
-
+  
   void _subscribeToCharacteristics(String deviceId) {
     _photoSub?.cancel();
     _childSub?.cancel();
@@ -156,7 +214,7 @@ class BluetoothController extends GetxController {
     _receivingImage = false;
     _lastByteOfPrevChunk = null;
     _decodingInProgress = false;
-    _receptionStartTime = null; // DEBUG: Reseta o timer
+    _receptionStartTime = null;
 
     _photoSub = flutterReactiveBle
         .subscribeToCharacteristic(QualifiedCharacteristic(
@@ -165,17 +223,13 @@ class BluetoothController extends GetxController {
       characteristicId: photoCharUuid,
     ))
         .listen((chunk) async {
-      
       print('📦 Chunk recebido: ${chunk.length} bytes');
       int i = 0;
-
-      // Verifica início entre chunks
       if (!_receivingImage &&
           _lastByteOfPrevChunk == 0xFF &&
           chunk.isNotEmpty &&
           chunk[0] == 0xD8) {
         print('🟢 Início JPEG detectado entre chunks');
-        // DEBUG: Marca o início da recepção
         _receptionStartTime = DateTime.now();
         _receivingImage = true;
         _imageBuffer.clear();
@@ -188,7 +242,6 @@ class BluetoothController extends GetxController {
               chunk[i] == 0xFF &&
               chunk[i + 1] == 0xD8) {
             print('🟢 Início JPEG detectado dentro do chunk');
-            // DEBUG: Marca o início da recepção
             _receptionStartTime = DateTime.now();
             _receivingImage = true;
             _imageBuffer.clear();
@@ -199,14 +252,12 @@ class BluetoothController extends GetxController {
             i++;
           }
         } else {
-          // _receivingImage == true
           _imageBuffer.add(chunk[i]);
 
           if (i < chunk.length - 1 &&
               chunk[i] == 0xFF &&
               chunk[i + 1] == 0xD8) {
             print('⚠️ Novo início JPEG antes do fim do anterior. Reiniciando...');
-            // DEBUG: Reseta o timer para a nova imagem
             _receptionStartTime = DateTime.now();
             _imageBuffer.clear();
             _imageBuffer.add(0xFF);
@@ -220,10 +271,7 @@ class BluetoothController extends GetxController {
               _imageBuffer[len - 2] == 0xFF &&
               _imageBuffer[len - 1] == 0xD9) {
             
-            // Marca o tempo exato em que o fim da imagem foi detectado
             final eoiDetectionTime = DateTime.now();
-
-            // Calcula e imprime o tempo total de recepção
             if (_receptionStartTime != null) {
               final receptionDuration =
                   eoiDetectionTime.difference(_receptionStartTime!);
@@ -252,9 +300,6 @@ class BluetoothController extends GetxController {
                 final totalDuration = _receptionStartTime != null
                     ? DateTime.now().difference(_receptionStartTime!)
                     : null;
-
-                // >>> NOVA MEDIÇÃO <<<
-                // Calcula e imprime o tempo entre o fim da recepção e o fim da decodificação.
                 final durationSinceEoi = DateTime.now().difference(eoiDetectionTime);
                 print('DEBUG: ⏱️ Tempo (FIM RECEPÇÃO -> FIM DECODIFICAÇÃO): ${durationSinceEoi.inMilliseconds} ms.');
 
@@ -313,7 +358,6 @@ class BluetoothController extends GetxController {
         .listen((data) {
       var str = String.fromCharCodes(data);
       childDetected.value = str.toLowerCase() == 'true' || str == '1';
-      //print('👶 Child detected: ${childDetected.value}');
     }, onError: (e) {
       print('Erro ao receber dado child: $e');
     });

@@ -11,7 +11,6 @@ class MainPageController extends GetxController {
   var bateriaEsp = 50.obs;
   var showBlePage = false.obs;
 
-  // >>> NOVO <<<
   // Variável reativa para controlar o título da AppBar
   var appBarTitle = 'Início'.obs;
 
@@ -44,7 +43,7 @@ class MainPageController extends GetxController {
       appBarTitle.value = 'Conexão Bluetooth';
       final bleController = Get.find<BluetoothController>();
       if (!bleController.isScanning.value) {
-        bleController.startScan();
+        bleController.startAutoScan();
       }
     } else {
       // Quando voltar, restaura o título da aba de Configurações
@@ -52,7 +51,6 @@ class MainPageController extends GetxController {
     }
   }
 
-  // >>> NOVO <<<
   // Função privada para atualizar o título com base no índice da aba
   void _updateTitle(int index){
     switch (index) {

@@ -7,9 +7,12 @@ import 'package:get/get.dart';
 
 void main() {
 
-  Get.lazyPut<FormController>(() => FormController(), fenix: true);
-  Get.lazyPut<BluetoothController>(() => BluetoothController(), fenix: true);
-  Get.lazyPut<PhotoController>(() => PhotoController(), fenix: true);
+  WidgetsFlutterBinding.ensureInitialized();
+
+  Get.put(PhotoController(), permanent: true);
+  Get.put(FormController(), permanent: true);
+  Get.put(BluetoothController(), permanent: true);
+
 
   runApp(const App());
 }
