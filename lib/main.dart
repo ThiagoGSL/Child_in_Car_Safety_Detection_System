@@ -4,10 +4,12 @@ import 'package:app_v0/features/photos/photo_controller.dart';
 import 'package:app_v0/features/splash/splash_page.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+
 void main() {
-  Get.lazyPut<FormController>(() => FormController());
-  Get.lazyPut<BluetoothController>(() => BluetoothController());
-  Get.lazyPut<PhotoController>(() => PhotoController());
+
+  Get.lazyPut<FormController>(() => FormController(), fenix: true);
+  Get.lazyPut<BluetoothController>(() => BluetoothController(), fenix: true);
+  Get.lazyPut<PhotoController>(() => PhotoController(), fenix: true);
 
   runApp(const App());
 }

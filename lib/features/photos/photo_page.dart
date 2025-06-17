@@ -11,59 +11,76 @@ class PhotoPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Fotos Salvas')),
-      body: Obx(() {
-        if (photoController.photos.isEmpty) {
-          return const Center(child: Text('Nenhuma foto salva'));
-        }
-
-        return GridView.builder(
-          padding: const EdgeInsets.all(8),
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 3,
-            crossAxisSpacing: 8,
-            mainAxisSpacing: 8,
+    return Obx(() {
+      if (photoController.photos.isEmpty) {
+        return const Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.photo_library_outlined, size: 60, color: Colors.grey),
+              SizedBox(height: 16),
+              Text('Nenhuma foto salva ainda.', style: TextStyle(fontSize: 16, color: Colors.grey)),
+            ],
           ),
-          itemCount: photoController.photos.length,
-          itemBuilder: (context, index) {
-            final photo = photoController.photos[index];
-            return GestureDetector(
-              onTap: () async {
-                await OpenFile.open(photo.path);
-              },
-              onLongPress: () {
-                _confirmDelete(context, photo);
-              },
-              child: Image.file(photo, fit: BoxFit.cover),
-            );
-          },
         );
-      }),
-    );
-  }
+      }
 
-  void _confirmDelete(BuildContext context, File photo) {
-    showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: const Text('Excluir foto?'),
-        content: const Text('Tem certeza que deseja excluir esta foto?'),
-        actions: [
-          TextButton(
-            onPressed: () => Get.back(),
-            child: const Text('Cancelar'),
-          ),
-          TextButton(
-            onPressed: () {
-              photoController.deletePhoto(photo);
-              Get.back();
-              Get.snackbar('Sucesso', 'Foto excluída');
+      return GridView.builder(
+        padding: const EdgeInsets.all(8),
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 3,
+          crossAxisSpacing: 8,
+          mainAxisSpacing: 8,
+        ),
+        itemCount: photoController.photos.length,
+        itemBuilder: (context, index) {
+          final originalPhoto = photoController.photos[index];
+          final thumbnailPath = photoController.getThumbnailPath(originalPhoto);
+          
+          return GestureDetector(
+            onTap: () {
+              if (photoController.isSelectionMode.value) {
+                photoController.togglePhotoSelection(originalPhoto);
+              } else {
+                OpenFile.open(originalPhoto.path);
+              }
             },
-            child: const Text('Excluir', style: TextStyle(color: Colors.red)),
-          ),
-        ],
-      ),
-    );
+            onLongPress: () {
+              if (!photoController.isSelectionMode.value) {
+                photoController.toggleSelectionMode();
+              }
+              photoController.togglePhotoSelection(originalPhoto);
+            },
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(8.0),
+              child: Obx(() {
+                final isThumbReady = photoController.readyThumbnails.contains(thumbnailPath);
+                final isSelected = photoController.selectedPhotos.contains(originalPhoto);
+
+                return Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    // Exibe a miniatura se estiver pronta, senão um placeholder
+                    if (isThumbReady)
+                      Image.file(File(thumbnailPath), fit: BoxFit.cover, gaplessPlayback: true)
+                    else
+                      Container(
+                        color: Colors.grey.shade300,
+                        child: const Icon(Icons.image_outlined, color: Colors.grey, size: 40),
+                      ),
+                    // Overlay de seleção
+                    if (isSelected)
+                      Container(
+                        color: Colors.black.withOpacity(0.5),
+                        child: const Icon(Icons.check_circle, color: Colors.white, size: 30),
+                      ),
+                  ],
+                );
+              }),
+            ),
+          );
+        },
+      );
+    });
   }
 }

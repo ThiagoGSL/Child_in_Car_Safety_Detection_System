@@ -134,22 +134,6 @@ class FormPage extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Seu conteúdo original do formulário permanece aqui, inalterado
-              const Center(
-                child: Padding(
-                  padding: EdgeInsets.only(top: 0, bottom: 20),
-                  child: Text(
-                    'Formulário de Cadastro',
-                    style: TextStyle(
-                      fontSize: 26,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.blue,
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 0),
-
               _buildEditableField(
                 context: context,
                 label: 'Seu Nome',
