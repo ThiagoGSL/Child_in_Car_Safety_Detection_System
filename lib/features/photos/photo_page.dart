@@ -10,69 +10,84 @@ class PhotoPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Obx reage às mudanças na variável 'lastPhoto' do controller.
+    // Cor de destaque do tema
+    final Color accentColor = const Color(0xFF53BF9D);
+    // Cor de fundo dos cards/dialogs
+    final Color tileColor = const Color(0xFF16213E);
+
     return Obx(() {
       final photoFile = photoController.lastPhoto.value;
 
-      // Se não houver foto, exibe uma mensagem centralizada.
+      // MODIFICADO: Estilo da tela de "nenhuma foto" para o tema escuro
       if (photoFile == null) {
         return const Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.photo_library_outlined, size: 60, color: Colors.grey),
+              Icon(Icons.photo_library_outlined, size: 60, color: Colors.white38),
               SizedBox(height: 16),
-              Text('Nenhuma foto salva ainda.', style: TextStyle(fontSize: 16, color: Colors.grey)),
+              Text(
+                'Nenhuma foto salva ainda.',
+                style: TextStyle(fontSize: 16, color: Colors.white54),
+              ),
             ],
           ),
         );
       }
 
-      // Se houver uma foto, exibe a imagem e um botão para excluir.
       return Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(24.0),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
+            // MODIFICADO: Estilo do título
             const Text(
               'Última Foto Recebida',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black54),
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
             ),
             const SizedBox(height: 20),
             Expanded(
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(12.0),
-                // InteractiveViewer permite dar zoom e mover a imagem.
-                child: InteractiveViewer(
-                  maxScale: 5.0,
-                  child: Image.file(
-                    File(photoFile.path),
-                    fit: BoxFit.contain,
-                    // key é importante para forçar o Flutter a recarregar a imagem quando o arquivo muda
-                    key: ValueKey(photoFile.path), 
+              // NOVO: Container para criar uma moldura sutil para a foto
+              child: Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(12.0),
+                  border: Border.all(color: Colors.white.withOpacity(0.1), width: 1),
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(12.0),
+                  child: InteractiveViewer(
+                    maxScale: 5.0,
+                    child: Image.file(
+                      File(photoFile.path),
+                      fit: BoxFit.contain,
+                      key: ValueKey(photoFile.path),
+                    ),
                   ),
                 ),
               ),
             ),
             const SizedBox(height: 20),
-            ElevatedButton.icon(
+            // MODIFICADO: Botão de exclusão reestilizado
+            OutlinedButton.icon(
               onPressed: () {
-                // Adiciona um diálogo de confirmação antes de excluir.
                 Get.dialog(
+                  // MODIFICADO: AlertDialog estilizado para o tema escuro
                   AlertDialog(
-                    title: const Text('Excluir Foto'),
-                    content: const Text('Tem certeza que deseja excluir esta foto?'),
+                    backgroundColor: tileColor,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    title: const Text('Excluir Foto', style: TextStyle(color: Colors.white)),
+                    content: const Text('Tem certeza que deseja excluir esta foto?', style: TextStyle(color: Colors.white70)),
                     actions: [
                       TextButton(
-                        onPressed: () => Get.back(), // Fecha o diálogo
-                        child: const Text('Cancelar'),
+                        onPressed: () => Get.back(),
+                        child: const Text('Cancelar', style: TextStyle(color: Colors.white70)),
                       ),
                       TextButton(
                         onPressed: () {
                           photoController.deleteLastPhoto();
-                          Get.back(); // Fecha o diálogo
+                          Get.back();
                         },
-                        child: const Text('Excluir', style: TextStyle(color: Colors.red)),
+                        child: const Text('Excluir', style: TextStyle(color: Colors.redAccent)),
                       ),
                     ],
                   ),
@@ -80,9 +95,11 @@ class PhotoPage extends StatelessWidget {
               },
               icon: const Icon(Icons.delete_outline),
               label: const Text('Excluir Foto'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red.shade400,
-                foregroundColor: Colors.white,
+              style: OutlinedButton.styleFrom(
+                foregroundColor: Colors.redAccent,
+                side: const BorderSide(color: Colors.redAccent, width: 1.5),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 24),
               ),
             ),
           ],

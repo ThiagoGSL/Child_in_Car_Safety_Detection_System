@@ -1,8 +1,8 @@
 import 'package:app_v0/features/bluetooth/ble_page.dart';
-import 'package:app_v0/features/notification/notification_controller.dart';
-import 'package:app_v0/features/notification/notification_page.dart';
-import 'package:app_v0/features/photos/photo_page.dart';
+import 'package:app_v0/features/cadastro/form_page.dart';
 import 'package:app_v0/features/main_page/main_page_controller.dart';
+import 'package:app_v0/features/notification/notification_controller.dart';
+import 'package:app_v0/features/photos/photo_page.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
@@ -15,85 +15,101 @@ class MainPage extends StatelessWidget {
     final NotificationController notificationController = Get.find<NotificationController>();
 
     return Scaffold(
+      backgroundColor: const Color(0xFF1A1A2E),
       appBar: AppBar(
         leading: Obx(() {
-          // Condição unificada para mostrar o botão de voltar
-          bool shouldShowBack = (controller.selectedIndex.value == 2) && 
-                                (controller.showBlePage.value || controller.showPhotoPage.value);
-
+          bool shouldShowBack = (controller.selectedIndex.value == 2) &&
+              (controller.showBlePage.value ||
+                  controller.showPhotoPage.value ||
+                  controller.showFormPage.value);
           if (shouldShowBack) {
             return IconButton(
               icon: const Icon(Icons.arrow_back_ios),
               onPressed: () {
-                // Determina para qual página voltar
                 if (controller.showBlePage.value) {
                   controller.navigateToBlePage(false);
                 } else if (controller.showPhotoPage.value) {
                   controller.navigateToPhotoPage(false);
+                } else if (controller.showFormPage.value) {
+                  controller.navigateToFormPage(false);
                 }
               },
             );
           }
-          // Se não, não mostra nada no leading
           return const SizedBox.shrink();
         }),
-        title: Obx(() => FittedBox(
-          fit: BoxFit.contain,
-          child: Text(
-            controller.appBarTitle.value,
-            style: const TextStyle(fontSize: 18.0),
-          ),
-        )),
-        backgroundColor: Colors.blue,
+        title: Obx(() {
+          if (controller.selectedIndex.value == 0) {
+            return const Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.crib_outlined, size: 24),
+                SizedBox(width: 8),
+                Text('SafeBaby'),
+              ],
+            );
+          }
+          return Text(controller.appBarTitle.value);
+        }),
+        centerTitle: true,
+        backgroundColor: const Color(0xFF1A1A2E),
         foregroundColor: Colors.white,
+        elevation: 0,
         actions: [
-          // Botão para abrir a página de histórico de notificações
-          IconButton(
-            icon: const Icon(Icons.notifications_outlined),
-            tooltip: 'Notificações',
-            onPressed: () {
-              // Navega para a página de notificações como uma nova tela
-              Get.to(() => NotificationPage());
-            },
-          ),
-          // Ações contextuais (botão de limpar ou status da bateria)
           Obx(() {
-            if (controller.selectedIndex.value == 1) {
+            // CONDIÇÃO ATUALIZADA: Botão só aparece se houver notificações para limpar
+            bool showClearButton = controller.selectedIndex.value == 1 && notificationController.notifications.isNotEmpty;
+
+            if (showClearButton) {
               return IconButton(
+                // NOVO ÍCONE: Mais sugestivo para "limpar tudo"
                 icon: const Icon(Icons.delete_sweep_outlined),
-                tooltip: 'Limpar Histórico',
+                tooltip: 'Limpar notificações',
                 onPressed: () {
-                  Get.dialog(AlertDialog(
-                    title: const Text('Limpar Histórico?'),
-                    content: const Text('Deseja apagar todas as notificações?'),
-                    actions: [
-                      TextButton(onPressed: () => Get.back(), child: const Text('Cancelar')),
-                      TextButton(
-                        onPressed: () {
-                          notificationController.clearNotifications();
-                          Get.back();
-                        },
-                        child: const Text('Limpar', style: TextStyle(color: Colors.red)),
+                  // NOVO: Exibe uma caixa de diálogo para confirmação
+                  Get.dialog(
+                    AlertDialog(
+                      backgroundColor: const Color(0xFF16213E), // Cor de fundo do tema
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
                       ),
-                    ],
-                  ));
+                      title: const Text(
+                        'Limpar Histórico',
+                        style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                      ),
+                      content: const Text(
+                        'Deseja realmente apagar todas as notificações? Esta ação não pode ser desfeita.',
+                        style: TextStyle(color: Colors.white70),
+                      ),
+                      actions: [
+                        // Botão para cancelar a ação
+                        TextButton(
+                          onPressed: () => Get.back(), // Apenas fecha o diálogo
+                          child: const Text('Cancelar', style: TextStyle(color: Colors.white70)),
+                        ),
+                        // Botão para confirmar a exclusão
+                        TextButton(
+                          onPressed: () {
+                            notificationController.clearNotifications();
+                            Get.back(); // Fecha o diálogo após a exclusão
+                          },
+                          child: Text(
+                            'Excluir',
+                            style: TextStyle(color: Colors.red.shade400, fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
                 },
               );
             }
-            
-            return Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(Icons.battery_charging_full),
-                Text(' ${controller.bateriaEsp.value} %'),
-                const SizedBox(width: 20),
-              ],
-            );
+            // Mantém o espaço para centralizar o título
+            return const SizedBox(width: 48);
           }),
         ],
       ),
       body: Obx(() {
-        // Lógica para exibir a sub-página correta dentro da aba de Configurações
         if (controller.selectedIndex.value == 2) {
           if (controller.showBlePage.value) {
             return BlePage();
@@ -101,20 +117,28 @@ class MainPage extends StatelessWidget {
           if (controller.showPhotoPage.value) {
             return PhotoPage();
           }
+          if (controller.showFormPage.value) {
+            return FormPage();
+          }
         }
-        // Se nenhuma sub-página estiver ativa, mostra a aba principal selecionada
         return Center(
           child: controller.widgetOptions.elementAt(controller.selectedIndex.value),
         );
       }),
       bottomNavigationBar: Obx(() => BottomNavigationBar(
+            backgroundColor: const Color(0xFF16213E),
+            type: BottomNavigationBarType.fixed,
+            unselectedItemColor: Colors.white54,
+            selectedItemColor: const Color(0xFF53BF9D),
+            selectedFontSize: 12,
+            unselectedFontSize: 12,
             items: <BottomNavigationBarItem>[
-              const BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
+              const BottomNavigationBarItem(icon: Icon(Icons.home_outlined), activeIcon: Icon(Icons.home), label: 'Início'),
               BottomNavigationBarItem(
                 icon: Stack(
                   clipBehavior: Clip.none,
                   children: [
-                    const Icon(Icons.notifications),
+                    const Icon(Icons.notifications_outlined),
                     if (notificationController.unreadCount.value > 0)
                       Positioned(
                         right: -8,
@@ -124,7 +148,7 @@ class MainPage extends StatelessWidget {
                           decoration: BoxDecoration(
                             color: Colors.red,
                             shape: BoxShape.circle,
-                            border: Border.all(color: Colors.white, width: 1),
+                            border: Border.all(color: const Color(0xFF16213E), width: 1.5),
                           ),
                           constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
                           child: Center(
@@ -137,12 +161,12 @@ class MainPage extends StatelessWidget {
                       ),
                   ],
                 ),
+                activeIcon: const Icon(Icons.notifications),
                 label: 'Notificações',
               ),
-              const BottomNavigationBarItem(icon: Icon(Icons.settings), label: 'Configurações'),
+              const BottomNavigationBarItem(icon: Icon(Icons.settings_outlined), activeIcon: Icon(Icons.settings), label: 'Configurações'),
             ],
             currentIndex: controller.selectedIndex.value,
-            selectedItemColor: Colors.blue.shade700,
             onTap: controller.onItemTapped,
           )),
     );

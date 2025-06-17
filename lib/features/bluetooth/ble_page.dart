@@ -13,25 +13,26 @@ class BlePage extends StatefulWidget {
 class _BlePageState extends State<BlePage> {
   final BluetoothController controller = Get.find<BluetoothController>();
 
+  final Color accentColor = const Color(0xFF53BF9D);
+  final Color tileColor = const Color(0xFF16213E);
+
   @override
   void initState() {
     super.initState();
     
-    // Inicia a busca por dispositivos disponíveis assim que a página é aberta
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!controller.isScanning.value) {
+      if (!controller.isScanning.value && !controller.isConnected.value) {
          controller.startManualScan();
       }
     });
   }
 
   void _showSnackbar(BuildContext context, String message, {Color? color}) {
-    // Garante que o contexto é válido antes de mostrar a SnackBar
     if (!mounted) return;
     ScaffoldMessenger.of(context).hideCurrentSnackBar();
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text(message),
-      backgroundColor: color ?? Colors.blueGrey,
+      content: Text(message, style: const TextStyle(color: Colors.white)),
+      backgroundColor: tileColor,
       duration: const Duration(seconds: 3),
     ));
   }
@@ -39,13 +40,12 @@ class _BlePageState extends State<BlePage> {
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: Colors.blue.shade200,
+      color: const Color(0xFF1A1A2E),
       child: SafeArea(
         child: Column(
           children: [
             const SizedBox(height: 20),
 
-            // Dispositivo conectado 
             Obx(() {
               final device = controller.connectedDevice.value;
               if (device == null) return const SizedBox.shrink();
@@ -54,8 +54,11 @@ class _BlePageState extends State<BlePage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 8.0),
-                    child: Text('Dispositivo Conectado', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white70)),
+                    padding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                    child: Text(
+                      'Dispositivo Conectado',
+                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+                    ),
                   ),
                   _buildDeviceTile(device, true),
                 ],
@@ -63,7 +66,6 @@ class _BlePageState extends State<BlePage> {
             }),
             const SizedBox(height: 10),
 
-            // Lista rolável de dispositivos disponíveis 
             Expanded(
               child: Obx(() {
                 final otherDevices = controller.foundDevices.where((d) => 
@@ -73,7 +75,7 @@ class _BlePageState extends State<BlePage> {
                   return const Center(child: Text('Nenhum dispositivo encontrado', style: TextStyle(color: Colors.white70)));
                 }
                 if (controller.isScanning.value && otherDevices.isEmpty) {
-                  return const Center(child: CircularProgressIndicator(color: Colors.white));
+                  return Center(child: CircularProgressIndicator(color: accentColor));
                 }
                 return ListView.builder(
                   padding: const EdgeInsets.symmetric(horizontal: 8.0),
@@ -81,8 +83,11 @@ class _BlePageState extends State<BlePage> {
                   itemBuilder: (context, index) {
                     if (index == 0) {
                       return const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 8.0, horizontal: 8.0),
-                        child: Text('Dispositivos Disponíveis', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white70)),
+                        padding: EdgeInsets.fromLTRB(16, 8, 16, 8),
+                        child: Text(
+                          'Dispositivos Disponíveis',
+                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+                        ),
                       );
                     }
                     final device = otherDevices[index - 1];
@@ -97,14 +102,19 @@ class _BlePageState extends State<BlePage> {
               return ElevatedButton.icon(
                 onPressed: controller.isScanning.value || controller.isConnecting.value ? null : () {
                   controller.startManualScan();
-                  _showSnackbar(context, 'Buscando novamente...');
+                  _showSnackbar(context, 'Buscando dispositivos...');
                 },
-                icon: const Icon(Icons.search, color: Colors.blueGrey),
-                label: const Text('Procurar Dispositivos', style: TextStyle(color: Colors.blueGrey)),
-                style: ElevatedButton.styleFrom(backgroundColor: Colors.white70),
+                icon: const Icon(Icons.search, color: Colors.white),
+                // MODIFICAÇÃO 3: Texto do botão alterado
+                label: const Text('Procurar Dispositivos', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: accentColor,
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
               );
             }),
-            const SizedBox(height: 10),
+            const SizedBox(height: 20),
           ],
         ),
       ),
@@ -112,29 +122,64 @@ class _BlePageState extends State<BlePage> {
   }
 
   Widget _buildDeviceTile(DiscoveredDevice device, bool connected) {
-    return Card(
-      color: connected ? Colors.green.shade300 : Colors.white,
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 8),
+      decoration: BoxDecoration(
+        color: tileColor,
+        borderRadius: BorderRadius.circular(12),
+        border: connected ? Border.all(color: accentColor, width: 1.5) : null,
+      ),
       child: ListTile(
-        leading: Icon(connected ? Icons.bluetooth_connected : Icons.bluetooth, color: connected ? Colors.white : Colors.black),
-        title: Text(device.name.isNotEmpty ? device.name : '(sem nome)', style: TextStyle(color: connected ? Colors.white : Colors.black, fontWeight: connected ? FontWeight.bold : FontWeight.normal)),
-        subtitle: Text('RSSI: ${device.rssi}', style: TextStyle(color: connected ? Colors.white70 : Colors.black54)),
+        leading: Icon(
+          connected ? Icons.bluetooth_connected : Icons.bluetooth,
+          color: connected ? accentColor : Colors.white54,
+        ),
+        title: Text(
+          device.name.isNotEmpty ? device.name : '(Dispositivo sem nome)',
+          style: TextStyle(
+            color: Colors.white,
+            fontWeight: connected ? FontWeight.bold : FontWeight.normal,
+          ),
+          overflow: TextOverflow.ellipsis, // Garante que o texto não quebre a linha
+        ),
+        subtitle: Text(
+          'RSSI: ${device.rssi}',
+          style: const TextStyle(color: Colors.white70),
+        ),
         trailing: Obx(() {
           if (connected) {
-            return ElevatedButton(
-              onPressed: controller.isConnecting.value ? null : () {
-                controller.disconnect();
-                _showSnackbar(Get.context!, 'Desconectado com sucesso', color: Colors.green.shade700);
-              },
+            // MODIFICAÇÃO 1: Botão "Desconectar" com borda vermelha
+            return OutlinedButton(
+              onPressed: controller.isConnecting.value ? null : controller.disconnect,
+              style: OutlinedButton.styleFrom(
+                // MODIFICAÇÃO 2: Padding do botão diminuído
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                foregroundColor: Colors.redAccent,
+                side: const BorderSide(color: Colors.redAccent, width: 1.5),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              ),
               child: const Text('Desconectar'),
             );
           } else {
             return ElevatedButton(
               onPressed: controller.isConnecting.value || controller.isConnected.value ? null : () {
                 controller.connectToDevice(device);
-                _showSnackbar(Get.context!, 'Conectando ao dispositivo ${device.name}...');
+                _showSnackbar(Get.context!, 'Conectando a ${device.name}...');
               },
-              child: controller.isConnecting.value && controller.connectedDeviceName.value == device.name
-                  ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation<Color>(Colors.white))) 
+              style: ElevatedButton.styleFrom(
+                backgroundColor: accentColor,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                // MODIFICAÇÃO 2: Padding do botão diminuído
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              ),
+              child: controller.isConnecting.value && controller.connectedDeviceName.value == device.id
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation<Color>(Colors.white)),
+                    ) 
                   : const Text('Conectar'),
             );
           }

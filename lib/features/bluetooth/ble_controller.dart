@@ -55,19 +55,22 @@ class BluetoothController extends GetxController {
       }
     });
 
-    ever(receivedImage, (Uint8List? ImageData){
-      if (ImageData != null && ImageData.isNotEmpty) {
+    // Listener para reagir sempre que uma nova imagem for recebida
+    ever(receivedImage, (Uint8List? imageData){
+      if (imageData != null && imageData.isNotEmpty) {
+        // SNACKBAR MODIFICADA
         Get.snackbar(
           "Foto Recebida!",
-           "Uma nova imagem foi recebida do ESP32-CAM",
+           "Uma nova imagem foi salva com sucesso.",
            snackPosition: SnackPosition.TOP,
-           backgroundColor: Colors.green,
+           backgroundColor: const Color(0xFF16213E), // Fundo escuro
            colorText: Colors.white,
-           margin: const EdgeInsets.all(10),
-           duration: const Duration(seconds: 4),);
+           margin: const EdgeInsets.all(12),
+           borderRadius: 12,
+           icon: const Icon(Icons.check_circle_outline, color: Color(0xFF53BF9D)), // Ícone com cor de destaque
+           duration: const Duration(seconds: 3),);
       }
-    });
-  
+    }); 
   }
 
   Future<bool> _checkPermissions() async {

@@ -1,4 +1,3 @@
-import 'package:app_v0/features/cadastro/form_page.dart';
 import 'package:app_v0/features/main_page/main_page_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -8,36 +7,33 @@ class ConfigPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Obtém a instância do MainPageController para controlar a navegação
     final mainController = Get.find<MainPageController>();
 
+    // MODIFICADO: Adicionado padding à ListView
     return ListView(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
+      padding: const EdgeInsets.all(16.0),
       children: [
         _buildConfigTile(
-          icon: Icons.bluetooth,
+          icon: Icons.bluetooth_searching,
           title: 'Conexão Bluetooth',
           subtitle: 'Gerenciar conexão com o dispositivo',
           onTap: () {
-            // Chama o método no controller para mostrar a BlePage
             mainController.navigateToBlePage(true);
           },
         ),
         _buildConfigTile(
-          icon: Icons.person_add_alt_1,
+          icon: Icons.person_outline,
           title: 'Cadastro de Usuário',
           subtitle: 'Editar suas informações de perfil',
           onTap: () {
-            // Navega para a FormPage como uma nova tela, pois é um fluxo diferente
-            Get.to(() => FormPage());
+            mainController.navigateToFormPage(true);
           },
         ),
         _buildConfigTile(
-          icon: Icons.photo_library,
+          icon: Icons.photo_library_outlined,
           title: 'Fotos Salvas',
-          subtitle: 'Visualizar a última foto recebida',
+          subtitle: 'Visualizar as fotos recebidas',
           onTap: () {
-            // Chama o método no controller para mostrar a PhotoPage
             mainController.navigateToPhotoPage(true);
           },
         ),
@@ -46,29 +42,46 @@ class ConfigPage extends StatelessWidget {
           title: 'Sobre o App',
           subtitle: 'Versão 1.0.0',
           onTap: () {
-             Get.snackbar('Sobre', 'Aplicativo desenvolvido para o projeto ForgottenBaby.');
+             // MODIFICADO: SnackBar estilizada para o tema escuro
+             Get.snackbar(
+              'Sobre o App', 
+              'SafeBaby Monitor v1.0.0',
+              snackPosition: SnackPosition.BOTTOM,
+              backgroundColor: const Color(0xFF16213E), // Fundo escuro
+              colorText: Colors.white, // Texto branco
+              icon: const Icon(Icons.info_outline, color: Color(0xFF53BF9D)), // Ícone com cor de destaque
+              margin: const EdgeInsets.all(12),
+              borderRadius: 12,
+              );
           },
         ),
       ],
     );
   }
 
-  // Widget auxiliar para construir os itens da lista de forma consistente
+  // MODIFICADO: Widget de tile completamente reestilizado para o tema escuro
   Widget _buildConfigTile({
     required IconData icon,
     required String title,
     required String subtitle,
     required VoidCallback onTap,
   }) {
-    return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 6.0),
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+    // Paleta de cores do tema
+    final Color accentColor = const Color(0xFF53BF9D);
+    final Color tileBackgroundColor = const Color(0xFF16213E);
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: tileBackgroundColor,
+        borderRadius: BorderRadius.circular(12),
+      ),
       child: ListTile(
-        leading: Icon(icon, color: Colors.blue.shade700, size: 30),
-        title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
-        subtitle: Text(subtitle),
-        trailing: const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
+        contentPadding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+        leading: Icon(icon, color: accentColor, size: 30),
+        title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
+        subtitle: Text(subtitle, style: const TextStyle(color: Colors.white70)),
+        trailing: const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.white38),
         onTap: onTap,
       ),
     );
