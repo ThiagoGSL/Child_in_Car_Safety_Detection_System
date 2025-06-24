@@ -57,16 +57,15 @@ class MainPage extends StatelessWidget {
         elevation: 0,
         actions: [
           Obx(() {
-            // CONDIÇÃO ATUALIZADA: Botão só aparece se houver notificações para limpar
+            // Botão só aparece se houver notificações para limpar
             bool showClearButton = controller.selectedIndex.value == 1 && notificationController.notifications.isNotEmpty;
 
             if (showClearButton) {
               return IconButton(
-                // NOVO ÍCONE: Mais sugestivo para "limpar tudo"
                 icon: const Icon(Icons.delete_sweep_outlined),
                 tooltip: 'Limpar notificações',
                 onPressed: () {
-                  // NOVO: Exibe uma caixa de diálogo para confirmação
+                  // Exibe uma caixa de diálogo para confirmação
                   Get.dialog(
                     AlertDialog(
                       backgroundColor: const Color(0xFF16213E), // Cor de fundo do tema
@@ -146,7 +145,7 @@ class MainPage extends StatelessWidget {
                         child: Container(
                           padding: const EdgeInsets.all(4),
                           decoration: BoxDecoration(
-                            color: Colors.red,
+                            color: Colors.red.shade700,
                             shape: BoxShape.circle,
                             border: Border.all(color: const Color(0xFF16213E), width: 1.5),
                           ),

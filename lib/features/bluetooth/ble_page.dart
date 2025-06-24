@@ -105,7 +105,6 @@ class _BlePageState extends State<BlePage> {
                   _showSnackbar(context, 'Buscando dispositivos...');
                 },
                 icon: const Icon(Icons.search, color: Colors.white),
-                // MODIFICAÇÃO 3: Texto do botão alterado
                 label: const Text('Procurar Dispositivos', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: accentColor,
@@ -124,66 +123,74 @@ class _BlePageState extends State<BlePage> {
   Widget _buildDeviceTile(DiscoveredDevice device, bool connected) {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-      padding: const EdgeInsets.symmetric(horizontal: 8),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: tileColor,
         borderRadius: BorderRadius.circular(12),
         border: connected ? Border.all(color: accentColor, width: 1.5) : null,
       ),
-      child: ListTile(
-        leading: Icon(
-          connected ? Icons.bluetooth_connected : Icons.bluetooth,
-          color: connected ? accentColor : Colors.white54,
-        ),
-        title: Text(
-          device.name.isNotEmpty ? device.name : '(Dispositivo sem nome)',
-          style: TextStyle(
-            color: Colors.white,
-            fontWeight: connected ? FontWeight.bold : FontWeight.normal,
+      child: Row(
+        children: [
+          Icon(
+            connected ? Icons.bluetooth_connected : Icons.bluetooth,
+            color: connected ? accentColor : Colors.white54,
           ),
-          overflow: TextOverflow.ellipsis, // Garante que o texto não quebre a linha
-        ),
-        subtitle: Text(
-          'RSSI: ${device.rssi}',
-          style: const TextStyle(color: Colors.white70),
-        ),
-        trailing: Obx(() {
-          if (connected) {
-            // MODIFICAÇÃO 1: Botão "Desconectar" com borda vermelha
-            return OutlinedButton(
-              onPressed: controller.isConnecting.value ? null : controller.disconnect,
-              style: OutlinedButton.styleFrom(
-                // MODIFICAÇÃO 2: Padding do botão diminuído
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                foregroundColor: Colors.redAccent,
-                side: const BorderSide(color: Colors.redAccent, width: 1.5),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-              ),
-              child: const Text('Desconectar'),
-            );
-          } else {
-            return ElevatedButton(
-              onPressed: controller.isConnecting.value || controller.isConnected.value ? null : () {
-                controller.connectToDevice(device);
-                _showSnackbar(Get.context!, 'Conectando a ${device.name}...');
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: accentColor,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                // MODIFICAÇÃO 2: Padding do botão diminuído
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              ),
-              child: controller.isConnecting.value && controller.connectedDeviceName.value == device.id
-                  ? const SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation<Color>(Colors.white)),
-                    ) 
-                  : const Text('Conectar'),
-            );
-          }
-        }),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  device.name.isNotEmpty ? device.name : '(Dispositivo sem nome)',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: connected ? FontWeight.bold : FontWeight.normal,
+                    fontSize: 16,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          Obx(() {
+            if (connected) {
+              return ElevatedButton(
+                onPressed: controller.isConnecting.value ? null : controller.disconnect,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.red.shade700,
+                  foregroundColor: Colors.white,
+                  disabledBackgroundColor: Colors.redAccent.withOpacity(0.25),
+                  disabledForegroundColor: Colors.white.withOpacity(0.7),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
+                ),
+                child: const Text('Desconectar'),
+              );
+            } else {
+              return ElevatedButton(
+                onPressed: controller.isConnecting.value || controller.isConnected.value ? null : () {
+                  controller.connectToDevice(device);
+                  _showSnackbar(Get.context!, 'Conectando a ${device.name}...');
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: accentColor,
+                  foregroundColor: Colors.white,
+                  disabledBackgroundColor: accentColor.withOpacity(0.25),
+                  disabledForegroundColor: Colors.white.withOpacity(0.7),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                ),
+                child: controller.isConnecting.value && controller.connectedDeviceName.value == device.id
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation<Color>(Colors.white)),
+                      ) 
+                    : const Text('Conectar'),
+              );
+            }
+          }),
+        ],
       ),
     );
   }

@@ -85,7 +85,7 @@ class PhotoPage extends StatelessWidget {
                   const SizedBox(height: 24),
                   Text(
                     'Última Captura',
-                    style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: accentColor),
+                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: accentColor),
                   ),
                   const SizedBox(height: 4),
                   Row(
@@ -155,7 +155,7 @@ class PhotoPage extends StatelessWidget {
           child: _buildActionColumn(
             onPressed: () => bleController.requestPhoto(),
             icon: Icons.camera_alt_outlined,
-            label: 'Tirar Foto', // ALTERADO
+            label: 'Tirar Foto', 
             color: accentColor,
           ),
         ),
@@ -199,7 +199,7 @@ class PhotoPage extends StatelessWidget {
               style: TextStyle(
                 color: color,
                 fontSize: 12,
-                fontWeight: FontWeight.normal, // ALTERADO
+                fontWeight: FontWeight.normal, 
               ),
             ),
           ],

@@ -93,7 +93,7 @@ class PhotoController extends GetxController {
     }
   }
 
-  // NOVO: Método para compartilhar a última foto.
+  // Compartilha a última foto.
   Future<void> shareLastPhoto() async {
     final photo = lastPhoto.value;
     

@@ -8,7 +8,7 @@ import 'package:intl/intl.dart';
 class NotificationPage extends StatelessWidget {
   NotificationPage({super.key});
 
-  // MODIFICADO: Paleta de cores dos ícones atualizada para o tema escuro
+  // Paleta de cores dos ícones atualizada para o tema escuro
   Widget _getIconForType(NotificationType type) {
     switch (type) {
       case NotificationType.connected:
@@ -34,7 +34,7 @@ class NotificationPage extends StatelessWidget {
     final MainPageController mainPageController = Get.find<MainPageController>();
 
     return Obx(() {
-      // MODIFICADO: Estilo da tela de "nenhuma notificação" para o tema escuro
+      // Estilo da tela de "nenhuma notificação" para o tema escuro
       if (controller.notifications.isEmpty) {
         return const Center(
           child: Column(
@@ -51,7 +51,7 @@ class NotificationPage extends StatelessWidget {
         );
       }
 
-      // MODIFICADO: A lista agora tem um padding mais adequado
+      // A lista agora tem um padding mais adequado
       return ListView.builder(
         padding: const EdgeInsets.all(16),
         itemCount: controller.notifications.length,
@@ -63,7 +63,7 @@ class NotificationPage extends StatelessWidget {
                               notification.type == NotificationType.disconnected ||
                               notification.type == NotificationType.photoReceived;
 
-          // MODIFICADO: Substituído o Card por um Container estilizado para o tema escuro
+          // Substituído o Card por um Container estilizado para o tema escuro
           return Container(
             margin: const EdgeInsets.only(bottom: 12),
             decoration: BoxDecoration(
@@ -73,7 +73,7 @@ class NotificationPage extends StatelessWidget {
             child: ListTile(
               contentPadding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
               leading: _getIconForType(notification.type),
-              // MODIFICADO: Estilos de texto para o tema escuro
+              // Estilos de texto para o tema escuro
               title: Text(
                 notification.message,
                 style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),

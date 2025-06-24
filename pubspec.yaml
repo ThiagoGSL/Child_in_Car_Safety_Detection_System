@@ -57,6 +57,7 @@ dependencies:
 dev_dependencies:
   drift_dev: ^2.15.0
   build_runner: ^2.4.6
+  flutter_launcher_icons: ^0.14.4
   flutter_test:
     sdk: flutter
 
@@ -71,6 +72,14 @@ dev_dependencies:
 # following page: https://dart.dev/tools/pub/pubspec
 
 # The following section is specific to Flutter packages.
+flutter_launcher_icons:
+  android: true
+  iOS: true
+  image_path: "lib/assets/iconeApp.png"
+  adaptive_icon_background: "#1a1a2e" # Define uma cor de fundo branca
+  adaptive_icon_foreground: "lib/assets/SafeBaby.png" # Define seu logo sem fundo
+
+
 flutter:
 
   # The following line ensures that the Material Icons font is

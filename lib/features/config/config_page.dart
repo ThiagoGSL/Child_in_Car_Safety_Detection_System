@@ -9,7 +9,6 @@ class ConfigPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final mainController = Get.find<MainPageController>();
 
-    // MODIFICADO: Adicionado padding à ListView
     return ListView(
       padding: const EdgeInsets.all(16.0),
       children: [
@@ -42,7 +41,6 @@ class ConfigPage extends StatelessWidget {
           title: 'Sobre o App',
           subtitle: 'Versão 1.0.0',
           onTap: () {
-             // MODIFICADO: SnackBar estilizada para o tema escuro
              Get.snackbar(
               'Sobre o App', 
               'SafeBaby Monitor v1.0.0',
@@ -59,7 +57,6 @@ class ConfigPage extends StatelessWidget {
     );
   }
 
-  // MODIFICADO: Widget de tile completamente reestilizado para o tema escuro
   Widget _buildConfigTile({
     required IconData icon,
     required String title,
