@@ -62,7 +62,7 @@ class MainPageController extends GetxController {
     if (show) {
       showBlePage.value = false; 
       showFormPage.value = false;
-      appBarTitle.value = 'Fotos Salvas';
+      appBarTitle.value = 'Galeria';
     } else {
       appBarTitle.value = 'Configurações';
     }
@@ -74,7 +74,7 @@ class MainPageController extends GetxController {
     if (show) {
       showBlePage.value = false;
       showPhotoPage.value = false;
-      appBarTitle.value = 'Cadastro de Usuário';
+      appBarTitle.value = 'Cadastro';
     } else {
       appBarTitle.value = 'Configurações';
     }

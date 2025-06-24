@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart'; // NOVO: Importa o pacote de compartilhamento
 
 class PhotoController extends GetxController {
   var lastPhoto = Rx<File?>(null);
@@ -12,7 +13,6 @@ class PhotoController extends GetxController {
   @override
   void onInit() {
     super.onInit();
-    // Ao iniciar, tenta carregar a última foto que pode ter sido salva anteriormente.
     loadLastPhoto();
   }
 
@@ -40,12 +40,16 @@ class PhotoController extends GetxController {
       final path = '${dir.path}/$_lastPhotoFileName';
       final file = File(path);
       
-      // Escreve os bytes no arquivo, sobrescrevendo o conteúdo anterior.
       await file.writeAsBytes(imageBytes);
 
-      // Atualiza a variável reativa para a UI reagir.
-      // Adicionamos um timestamp para forçar a atualização do cache do Image.file.
-      lastPhoto.value = await file.copy('${file.path}?v=${DateTime.now().millisecondsSinceEpoch}');
+      // Limpamos o cache da imagem para garantir que a nova versão seja exibida
+      imageCache.clear();
+      imageCache.clearLiveImages();
+      
+      // Atualiza a variável reativa. O 'File' por si só é suficiente.
+      lastPhoto.value = file;
+      // Força a atualização do Obx na UI, caso o caminho seja o mesmo.
+      lastPhoto.refresh();
       
       print('📸 Foto salva/sobrescrita em: $path');
     } catch (e) {
@@ -55,11 +59,11 @@ class PhotoController extends GetxController {
 
   /// Exclui a última foto salva.
   Future<void> deleteLastPhoto() async {
-    if (lastPhoto.value != null && await lastPhoto.value!.exists()) {
+    final photo = lastPhoto.value;
+    if (photo != null && await photo.exists()) {
       try {
-        await lastPhoto.value!.delete();
-        lastPhoto.value = null; // Limpa a variável para a UI atualizar.
-        // MODIFICADO: SnackBar de sucesso com a nova identidade visual
+        await photo.delete();
+        lastPhoto.value = null; 
         Get.snackbar(
           'Sucesso!',
           'A foto foi excluída.',
@@ -74,7 +78,6 @@ class PhotoController extends GetxController {
         print('🗑️ Última foto excluída.');
       } catch (e) {
         print('❌ Erro ao excluir a foto: $e');
-        // MODIFICADO: SnackBar de erro com a nova identidade visual
         Get.snackbar(
           'Erro',
           'Não foi possível excluir a foto.',
@@ -87,6 +90,42 @@ class PhotoController extends GetxController {
           snackStyle: SnackStyle.GROUNDED,
         );
       }
+    }
+  }
+
+  // NOVO: Método para compartilhar a última foto.
+  Future<void> shareLastPhoto() async {
+    final photo = lastPhoto.value;
+    
+    // Verifica se a referência ao arquivo não é nula e se o arquivo realmente existe no disco.
+    if (photo != null && await photo.exists()) {
+      try {
+        // Converte o File para XFile, que é o tipo esperado pelo pacote share_plus.
+        final xfile = XFile(photo.path);
+
+        // Abre a interface de compartilhamento nativa do sistema operacional.
+        await Share.shareXFiles(
+          [xfile],
+          text: 'Foto do meu bebê, monitorada pelo SafeBaby!', // Texto opcional que acompanha a imagem.
+        );
+        print('🚀 Foto compartilhada com sucesso.');
+      } catch (e) {
+        print('❌ Erro ao compartilhar a foto: $e');
+      }
+    } else {
+      // Se o arquivo não for encontrado, exibe uma mensagem de erro com a identidade visual do app.
+      Get.snackbar(
+        'Erro',
+        'Não foi possível encontrar a foto para compartilhar.',
+        snackPosition: SnackPosition.TOP,
+        backgroundColor: const Color(0xFF16213E),
+        colorText: Colors.white,
+        margin: EdgeInsets.zero,
+        borderRadius: 0,
+        icon: Icon(Icons.error_outline, color: Colors.red.shade400),
+        snackStyle: SnackStyle.GROUNDED,
+      );
+      print('⚠️ Tentativa de compartilhar uma foto que não existe.');
     }
   }
 }

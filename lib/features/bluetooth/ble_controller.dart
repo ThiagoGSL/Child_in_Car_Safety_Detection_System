@@ -3,7 +3,7 @@ import 'dart:typed_data';
 import 'dart:ui' as ui;
 import 'package:app_v0/features/notification/notification_controller.dart';
 import 'package:app_v0/features/notification/notification_model.dart';
-import 'package:app_v0/features/photos/photo_controller.dart'; // Verifique se o caminho está correto
+import 'package:app_v0/features/photos/photo_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_reactive_ble/flutter_reactive_ble.dart';
 import 'package:get/get.dart';
@@ -15,6 +15,8 @@ class BluetoothController extends GetxController {
   final serviceUuid = Uuid.parse('19b10000-e8f2-537e-4f6c-d104768a1214');
   final photoCharUuid = Uuid.parse('6df8c9f3-0d19-4457-aec9-befd07394aa0');
   final childCharUuid = Uuid.parse('4f0ebb9b-74a5-429e-83dd-ebc3a2b37421');
+  // NOVO: UUID da característica de comando. Deve ser o mesmo definido no ESP32.
+  final commandCharUuid = Uuid.parse('a2191136-22a0-494b-a55c-a16250766324');
 
   var isConnected = false.obs;
   var isScanning = false.obs;
@@ -23,7 +25,7 @@ class BluetoothController extends GetxController {
   var foundDevices = <DiscoveredDevice>[].obs;
   
   var connectedDevice = Rx<DiscoveredDevice?>(null);
-
+  var isRequestingPhoto = false.obs; 
   var receivedImage = Rx<Uint8List?>(null);
   var childDetected = false.obs;
 
@@ -147,8 +149,9 @@ class BluetoothController extends GetxController {
     _connSub?.cancel();
     _connSub = flutterReactiveBle.connectToDevice(
       id: device.id,
+      // ALTERADO: Adiciona a característica de comando para ser descoberta
       servicesWithCharacteristicsToDiscover: {
-        serviceUuid: [photoCharUuid, childCharUuid]
+        serviceUuid: [photoCharUuid, childCharUuid, commandCharUuid]
       },
       connectionTimeout: const Duration(seconds: 15),
     ).listen((state) async {
@@ -176,7 +179,6 @@ class BluetoothController extends GetxController {
           NotificationType.connected,
         );
         
-        // NOVO: Exibe SnackBar de conexão bem-sucedida
         Get.snackbar(
           'Conectado',
           'Dispositivo "${device.name}" conectado com sucesso.',
@@ -202,6 +204,68 @@ class BluetoothController extends GetxController {
     });
   }
 
+  // ####################################################################
+  // #                        NOVA FUNÇÃO                               #
+  // ####################################################################
+
+  Future<void> requestPhoto() async {
+    if (!isConnected.value || connectedDevice.value == null) {
+      print('Erro: Não é possível solicitar foto, dispositivo não conectado.');
+      Get.snackbar(
+        'Não conectado',
+        'Conecte-se a um dispositivo antes de solicitar uma foto.',
+        snackPosition: SnackPosition.TOP,
+        backgroundColor: Colors.red.shade800,
+        colorText: Colors.white,
+      );
+      return;
+    }
+    // NOVO: Adiciona verificação para não solicitar outra enquanto uma já está em andamento
+    if (isRequestingPhoto.value) {
+      print('⚠️ Solicitação de foto já em andamento.');
+      return;
+    }
+    
+    final characteristic = QualifiedCharacteristic(
+      serviceId: serviceUuid,
+      characteristicId: commandCharUuid,
+      deviceId: connectedDevice.value!.id,
+    );
+
+    try {
+      // Envia o comando '1' para a característica
+      final command = Uint8List.fromList([1]);
+      print('➡️  Enviando comando para solicitar foto...');
+      await flutterReactiveBle.writeCharacteristicWithResponse(
+        characteristic,
+        value: command,
+      );
+      print('✅ Comando de foto enviado com sucesso.');
+      Get.snackbar(
+        'Solicitação Enviada',
+        'Aguardando imagem da câmera...',
+        snackPosition: SnackPosition.TOP,
+        backgroundColor: const Color(0xFF16213E),
+        colorText: Colors.white,
+        margin: const EdgeInsets.all(12),
+        borderRadius: 12,
+        icon: const Icon(Icons.camera, color: Colors.white),
+        duration: const Duration(seconds: 2),
+      );
+    } catch (e) {
+      print('❌ Erro ao enviar comando de foto: $e');
+      Get.snackbar(
+        'Erro',
+        'Falha ao solicitar a foto. Tente novamente.',
+        snackPosition: SnackPosition.TOP,
+        backgroundColor: Colors.red.shade800,
+        colorText: Colors.white,
+      );
+    }
+  }
+
+  // ####################################################################
+
   void disconnect() {
     _connSub?.cancel();
     _photoSub?.cancel();
@@ -218,7 +282,6 @@ class BluetoothController extends GetxController {
         NotificationType.disconnected,
       );
 
-      // NOVO: Exibe SnackBar de desconexão
       Get.snackbar(
         'Desconectado',
         'A conexão com "$disconnectedDeviceName" foi encerrada.',
@@ -260,6 +323,7 @@ class BluetoothController extends GetxController {
     _decodingInProgress = false;
     _receptionStartTime = null;
 
+    // A lógica de recebimento da foto permanece EXATAMENTE A MESMA.
     _photoSub = flutterReactiveBle
         .subscribeToCharacteristic(QualifiedCharacteristic(
       deviceId: deviceId,
@@ -267,6 +331,7 @@ class BluetoothController extends GetxController {
       characteristicId: photoCharUuid,
     ))
         .listen((chunk) async {
+      // ... (todo o seu código de reconstrução de imagem aqui, sem alteração) ...
       print('📦 Chunk recebido: ${chunk.length} bytes');
       int i = 0;
       if (!_receivingImage &&
@@ -391,6 +456,7 @@ class BluetoothController extends GetxController {
         _receivingImage = false;
         _decodingInProgress = false;
       }
+
     }, onError: (e) {
       print('Erro ao receber imagem: $e');
       _imageBuffer.clear();

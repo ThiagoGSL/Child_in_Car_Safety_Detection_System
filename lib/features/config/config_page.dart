@@ -31,8 +31,8 @@ class ConfigPage extends StatelessWidget {
         ),
         _buildConfigTile(
           icon: Icons.photo_library_outlined,
-          title: 'Fotos Salvas',
-          subtitle: 'Visualizar as fotos recebidas',
+          title: 'Galeria',
+          subtitle: 'Visualizar última foto recebida',
           onTap: () {
             mainController.navigateToPhotoPage(true);
           },
@@ -46,7 +46,7 @@ class ConfigPage extends StatelessWidget {
              Get.snackbar(
               'Sobre o App', 
               'SafeBaby Monitor v1.0.0',
-              snackPosition: SnackPosition.BOTTOM,
+              snackPosition: SnackPosition.TOP,
               backgroundColor: const Color(0xFF16213E), // Fundo escuro
               colorText: Colors.white, // Texto branco
               icon: const Icon(Icons.info_outline, color: Color(0xFF53BF9D)), // Ícone com cor de destaque
