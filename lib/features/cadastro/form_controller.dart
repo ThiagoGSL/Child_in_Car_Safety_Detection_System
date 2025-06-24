@@ -11,7 +11,10 @@ class FormController extends GetxController {
   var email          = ''.obs;
   var phone          = ''.obs;
   var emergencyName  = ''.obs;
-  var emergencyPhone = ''.obs;
+  var emergencyPhone = ''.obs; // Este já é um RxString
+
+  // NOVO: Getter para o número de emergência
+  String get emergencyPhoneNumber => emergencyPhone.value;
 
   // Controle de edição individual por campo
   var editingUserName       = false.obs;
@@ -42,7 +45,7 @@ class FormController extends GetxController {
       email.value          = u.email;
       phone.value          = u.phone;
       emergencyName.value  = u.emergencyName;
-      emergencyPhone.value = u.emergencyPhone;
+      emergencyPhone.value = u.emergencyPhone; // O valor é atribuído aqui
     }
 
     // Resetar edição ao carregar
@@ -84,7 +87,7 @@ class FormController extends GetxController {
     print('––– Registros no banco (${records.length}) –––');
     for (var u in records) {
       print('• [${u.id}] ${u.userName}, ${u.childName}, ${u.email}, '
-            '${u.phone}, ${u.emergencyName}, ${u.emergencyPhone}');
+          '${u.phone}, ${u.emergencyName}, ${u.emergencyPhone}');
     }
   }
 

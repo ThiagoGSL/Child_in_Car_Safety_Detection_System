@@ -1,3 +1,5 @@
+// lib/main.dart
+
 import 'package:app_v0/features/cadastro/form_controller.dart';
 import 'package:app_v0/features/splash/splash_page.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -6,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:get/get.dart';
 import 'features/services/notification_service.dart';
+import 'package:flutter/services.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -14,6 +17,7 @@ void main() async {
   // Solicitar permissões
   await Permission.notification.request();
   await Permission.location.request();
+  await Permission.sms.request();
 
   // Inicializar notificações
   await AwesomeNotifications().initialize(
@@ -39,12 +43,13 @@ void main() async {
 
   // Definir listener global de ações de notificação
   AwesomeNotifications().setListeners(
-    onActionReceivedMethod: NotificationService.onActionReceivedMethod, // Usando o método do serviço
+    onActionReceivedMethod: NotificationService.onActionReceivedMethod,
+    // NOVO: Adicionar listener para quando a notificação é exibida
+    onNotificationDisplayedMethod: NotificationService.onNotificationDisplayedMethod,
   );
 
   Get.lazyPut<FormController>(() => FormController());
   runApp(App());
-
 }
 
 class App extends StatelessWidget {
@@ -55,9 +60,8 @@ class App extends StatelessWidget {
     return GetMaterialApp(
       title: 'Meu App',
       theme: ThemeData(primarySwatch: Colors.blue),
-      home: SplashPage(), 
+      home: SplashPage(),
       debugShowCheckedModeBanner: false,
     );
   }
 }
-
