@@ -24,10 +24,20 @@ class FormController extends GetxController {
   // Lista reativa de todos os registros no banco
   var records = <UserData>[].obs;
 
+  // --- MUDANÇA 1: onInit AGORA É LEVE ---
+  // A lógica de inicialização foi movida para o método init() abaixo.
   @override
   void onInit() {
     super.onInit();
-    loadData();
+  }
+
+  // --- MUDANÇA 2: NOVO MÉTODO DE INICIALIZAÇÃO ASSÍNCRONO ---
+  /// Este método será chamado e aguardado ('awaited') pelo SplashController
+  /// durante a tela de carregamento do app.
+  Future<void> init() async {
+    print("FormController: Iniciando carregamento dos dados do banco...");
+    await loadData();
+    print("FormController: Inicialização concluída.");
   }
 
   /// Carrega o primeiro registro e atualiza campos reativos

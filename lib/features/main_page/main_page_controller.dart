@@ -13,7 +13,7 @@ class MainPageController extends GetxController {
 
   var showBlePage = false.obs;
   var showPhotoPage = false.obs;
-  var showFormPage = false.obs; // Variável de estado para o formulário
+  var showFormPage = false.obs; // NOVO: Variável de estado para o formulário
 
   final List<Widget> widgetOptions = [
     const HomePage(),
@@ -32,7 +32,7 @@ class MainPageController extends GetxController {
       // Reseta TODAS as sub-páginas ao trocar de aba
       showBlePage.value = false;
       showPhotoPage.value = false;
-      showFormPage.value = false; // Reseta o estado do formulário
+      showFormPage.value = false; // NOVO: Reseta o estado do formulário
     }
     selectedIndex.value = index;
     _updateTitle(index);
@@ -68,7 +68,7 @@ class MainPageController extends GetxController {
     }
   }
 
-  // Método para navegar para a página de formulário
+  // NOVO: Método para navegar para a página de formulário
   void navigateToFormPage(bool show) {
     showFormPage.value = show;
     if (show) {
@@ -89,7 +89,7 @@ class MainPageController extends GetxController {
         appBarTitle.value = 'Notificações';
         break;
       case 2:
-        // Condição atualizada para incluir a nova sub-página
+        // MODIFICADO: Condição atualizada para incluir a nova sub-página
         if (!showBlePage.value && !showPhotoPage.value && !showFormPage.value) {
            appBarTitle.value = 'Configurações';
         }

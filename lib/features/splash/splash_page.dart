@@ -1,3 +1,5 @@
+// splash_page.dart
+
 import 'package:app_v0/features/splash/splash_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -7,49 +9,50 @@ class SplashPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // A inicialização do controller agora é feita apenas pelo GetBuilder
-    return GetBuilder<SplashPageController>(
-      init: SplashPageController(),
-      builder: (controller) {
-        return Scaffold(
-          // O corpo da página agora tem a nova decoração
-          body: Container(
-            alignment: Alignment.center,
-            // MODIFICADO: Gradiente atualizado para o tema escuro
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [
-                  Color(0xFF1A1A2E), // Cor primária escura
-                  Color(0xFF16213E), // Cor secundária escura
-                ],
+    // Injeta o controller assim que a SplashPage é construída.
+    // O onInit() do controller será chamado automaticamente, disparando a inicialização.
+    Get.put(SplashPageController());
+
+    // O resto da sua UI continua exatamente igual, pois ela já é leve e eficiente.
+    return Scaffold(
+      body: Container(
+        alignment: Alignment.center,
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              Color(0xFF1A1A2E), // Cor primária escura
+              Color(0xFF16213E), // Cor secundária escura
+            ],
+          ),
+        ),
+        child: const Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.crib_outlined,
+              size: 80,
+              color: Colors.white,
+            ),
+            SizedBox(height: 20),
+            Text(
+              'SafeBaby',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 32,
+                fontWeight: FontWeight.bold,
+                letterSpacing: 1.5,
               ),
             ),
-            // MODIFICADO: Adicionado o ícone junto com o texto para reforçar a identidade
-            child: const Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  Icons.crib_outlined,
-                  size: 80,
-                  color: Colors.white,
-                ),
-                SizedBox(height: 20),
-                Text(
-                  'SafeBaby',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 32,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 1.5,
-                  ),
-                ),
-              ],
+            // Opcional: Adicionar um indicador de progresso
+            SizedBox(height: 30),
+            CircularProgressIndicator(
+              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
             ),
-          ),
-        );
-      },
+          ],
+        ),
+      ),
     );
   }
 }

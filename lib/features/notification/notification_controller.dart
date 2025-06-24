@@ -1,20 +1,28 @@
-import 'dart:convert'; // <-- IMPORTANTE: Necessário para codificar/decodificar JSON
+import 'dart:convert';
 import 'package:app_v0/features/notification/notification_model.dart';
 import 'package:get/get.dart';
-import 'package:shared_preferences/shared_preferences.dart'; // <-- IMPORTANTE: Importe o pacote
+import 'package:shared_preferences/shared_preferences.dart';
 
 class NotificationController extends GetxController {
   var notifications = <AppNotification>[].obs;
   var unreadCount = 0.obs;
 
-  // Chave única para salvar as notificações no dispositivo
   final String _storageKey = 'notifications_history';
 
+  // --- MUDANÇA 1: onInit AGORA É LEVE ---
+  // A lógica de inicialização foi movida para o método init() abaixo.
   @override
   void onInit() {
     super.onInit();
-    // <-- MUDANÇA: Carrega as notificações salvas quando o controller é iniciado.
-    _loadNotificationsFromStorage();
+  }
+
+  // --- MUDANÇA 2: NOVO MÉTODO DE INICIALIZAÇÃO ASSÍNCRONO ---
+  /// Este método será chamado e aguardado ('awaited') pelo SplashController
+  /// durante a tela de carregamento do app.
+  Future<void> init() async {
+    print("NotificationController: Iniciando carregamento do histórico de notificações...");
+    await _loadNotificationsFromStorage();
+    print("NotificationController: Inicialização concluída.");
   }
 
   void addNotification(String message, NotificationType type) {
@@ -25,7 +33,7 @@ class NotificationController extends GetxController {
     );
     notifications.insert(0, newNotification);
     unreadCount.value++;
-    // <-- MUDANÇA: Salva a lista toda vez que uma nova notificação é adicionada.
+    // Salva a lista toda vez que uma nova notificação é adicionada.
     _saveNotificationsToStorage();
   }
 
@@ -36,22 +44,19 @@ class NotificationController extends GetxController {
   void clearNotifications() {
     notifications.clear();
     unreadCount.value = 0;
-    // <-- MUDANÇA: Salva a lista vazia para limpar o armazenamento.
+    // Salva a lista vazia para limpar o armazenamento.
     _saveNotificationsToStorage();
   }
 
-  // --- NOVOS MÉTODOS DE PERSISTÊNCIA ---
+  // --- MÉTODOS DE PERSISTÊNCIA (sem alterações) ---
 
   /// Salva a lista atual de notificações no armazenamento do dispositivo.
   Future<void> _saveNotificationsToStorage() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      // Converte a lista de objetos AppNotification para uma lista de Mapas (JSON)
       final List<Map<String, dynamic>> notificationsJson =
           notifications.map((notification) => notification.toJson()).toList();
-      // Codifica a lista de mapas em uma única string JSON
       final String jsonString = json.encode(notificationsJson);
-      // Salva a string no SharedPreferences
       await prefs.setString(_storageKey, jsonString);
     } catch (e) {
       print('❌ Erro ao salvar notificações: $e');
@@ -65,9 +70,7 @@ class NotificationController extends GetxController {
       final String? jsonString = prefs.getString(_storageKey);
 
       if (jsonString != null) {
-        // Decodifica a string JSON para uma lista de mapas
         final List<dynamic> notificationsJson = json.decode(jsonString);
-        // Converte a lista de mapas de volta para uma lista de objetos AppNotification
         notifications.value = notificationsJson
             .map((jsonItem) => AppNotification.fromJson(jsonItem))
             .toList();

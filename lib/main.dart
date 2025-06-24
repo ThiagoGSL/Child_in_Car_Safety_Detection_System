@@ -1,5 +1,4 @@
 import 'package:app_v0/features/splash/splash_page.dart';
-import 'package:app_v0/main_binding.dart'; 
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
@@ -19,11 +18,6 @@ class App extends StatelessWidget {
     return GetMaterialApp(
       title: 'Meu App',
       theme: ThemeData(primarySwatch: Colors.blue),
-
-      // Use o initialBinding injeta todas as dependências globais
-      // antes que qualquer tela seja construída.
-      initialBinding: MainBinding(),
-
       home: SplashPage(),
       debugShowCheckedModeBanner: false,
     );

@@ -3,17 +3,28 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:share_plus/share_plus.dart'; // NOVO: Importa o pacote de compartilhamento
+import 'package:share_plus/share_plus.dart';
 
 class PhotoController extends GetxController {
   var lastPhoto = Rx<File?>(null);
 
   final String _lastPhotoFileName = 'last_received_photo.jpg';
 
+  // --- MUDANÇA 1: onInit AGORA É LEVE ---
+  // O método onInit agora está limpo. A lógica de inicialização foi
+  // movida para o novo método init() abaixo.
   @override
   void onInit() {
     super.onInit();
-    loadLastPhoto();
+  }
+
+  // --- MUDANÇA 2: NOVO MÉTODO DE INICIALIZAÇÃO ASSÍNCRONO ---
+  /// Este método será chamado e aguardado ('awaited') pelo SplashPageController
+  /// durante a tela de carregamento do app.
+  Future<void> init() async {
+    print("PhotoController: Iniciando carregamento da última foto...");
+    await loadLastPhoto();
+    print("PhotoController: Inicialização concluída.");
   }
 
   /// Carrega a última foto salva, se ela existir.
@@ -46,9 +57,7 @@ class PhotoController extends GetxController {
       imageCache.clear();
       imageCache.clearLiveImages();
       
-      // Atualiza a variável reativa. O 'File' por si só é suficiente.
       lastPhoto.value = file;
-      // Força a atualização do Obx na UI, caso o caminho seja o mesmo.
       lastPhoto.refresh();
       
       print('📸 Foto salva/sobrescrita em: $path');
@@ -93,27 +102,23 @@ class PhotoController extends GetxController {
     }
   }
 
-  // Compartilha a última foto.
+  /// Método para compartilhar a última foto.
   Future<void> shareLastPhoto() async {
     final photo = lastPhoto.value;
     
-    // Verifica se a referência ao arquivo não é nula e se o arquivo realmente existe no disco.
     if (photo != null && await photo.exists()) {
       try {
-        // Converte o File para XFile, que é o tipo esperado pelo pacote share_plus.
         final xfile = XFile(photo.path);
 
-        // Abre a interface de compartilhamento nativa do sistema operacional.
         await Share.shareXFiles(
           [xfile],
-          text: 'Foto do meu bebê, monitorada pelo SafeBaby!', // Texto opcional que acompanha a imagem.
+          text: 'Foto do meu bebê, monitorada pelo SafeBaby!',
         );
         print('🚀 Foto compartilhada com sucesso.');
       } catch (e) {
         print('❌ Erro ao compartilhar a foto: $e');
       }
     } else {
-      // Se o arquivo não for encontrado, exibe uma mensagem de erro com a identidade visual do app.
       Get.snackbar(
         'Erro',
         'Não foi possível encontrar a foto para compartilhar.',

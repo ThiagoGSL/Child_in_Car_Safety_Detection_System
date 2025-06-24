@@ -15,7 +15,6 @@ class BluetoothController extends GetxController {
   final serviceUuid = Uuid.parse('19b10000-e8f2-537e-4f6c-d104768a1214');
   final photoCharUuid = Uuid.parse('6df8c9f3-0d19-4457-aec9-befd07394aa0');
   final childCharUuid = Uuid.parse('4f0ebb9b-74a5-429e-83dd-ebc3a2b37421');
-  // NOVO: UUID da característica de comando. Deve ser o mesmo definido no ESP32.
   final commandCharUuid = Uuid.parse('a2191136-22a0-494b-a55c-a16250766324');
 
   var isConnected = false.obs;
@@ -47,8 +46,21 @@ class BluetoothController extends GetxController {
   @override
   void onInit() {
     super.onInit();
+  }
+
+  // --- MUDANÇA 2: NOVO MÉTODO DE INICIALIZAÇÃO ASSÍNCRONO ---
+  /// Este método será chamado pelo SplashController. Ele configura todos os
+  /// listeners necessários para o funcionamento do Bluetooth.
+  Future<void> init() async {
+    print("BluetoothController: Iniciando configuração dos listeners...");
+
+    // Injeta as dependências necessárias.
     _photoController = Get.find<PhotoController>();
     _notificationController = Get.find<NotificationController>();
+
+    // Configura o listener para o status do Bluetooth. A varredura (scan)
+    // só começará quando o hardware estiver pronto e depois que a splash
+    // screen já tiver sido exibida, evitando pop-ups de permissão indesejados.
     flutterReactiveBle.statusStream.listen((status) {
       print('BLE status: $status');
       if (status == BleStatus.ready) {
@@ -56,20 +68,25 @@ class BluetoothController extends GetxController {
       }
     });
 
-    ever(receivedImage, (Uint8List? imageData){
+    // Configura o listener para reagir a novas imagens recebidas.
+    ever(receivedImage, (Uint8List? imageData) {
       if (imageData != null && imageData.isNotEmpty) {
         Get.snackbar(
           "Foto Recebida!",
            "Uma nova imagem foi salva com sucesso.",
            snackPosition: SnackPosition.TOP,
-           backgroundColor: const Color(0xFF16213E), // Fundo escuro
+           backgroundColor: const Color(0xFF16213E),
            colorText: Colors.white,
            margin: const EdgeInsets.all(12),
            borderRadius: 12,
-           icon: const Icon(Icons.check_circle_outline, color: Color(0xFF53BF9D)), // Ícone com cor de destaque
+           icon: const Icon(Icons.check_circle_outline, color: Color(0xFF53BF9D)),
            duration: const Duration(seconds: 3),);
       }
-    }); 
+    });
+
+    print("BluetoothController: Configuração concluída. Aguardando status do BLE.");
+    // Este método termina sua execução rapidamente. O trabalho pesado (scan, conexão)
+    // é reativo e acontecerá em segundo plano.
   }
 
   Future<bool> _checkPermissions() async {
