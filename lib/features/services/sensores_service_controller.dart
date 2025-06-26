@@ -1,9 +1,11 @@
 import 'dart:async';
 import 'dart:math';
 import 'package:app_v0/features/models/check.dart';
+import 'package:awesome_notifications/awesome_notifications.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:sensors_plus/sensors_plus.dart';
 import 'package:get/get.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../services/sensores_service.dart'; // Import the new repository
 
 enum VehicleState {moving, stopped}
@@ -12,7 +14,7 @@ class VehicleDetectionController extends GetxController{
   final SensorDataRepository _repository = SensorDataRepository();
 
   var vehicleState = VehicleState.stopped.obs;
-  var chechinStatus = CheckinStatus.idle.obs;
+  var checkinStatus = CheckinStatus.idle.obs;
   var isCollectingData = true.obs;
   var checkinSeconds = 0.obs;
   var alertSeconds = 0.obs;
@@ -59,7 +61,7 @@ class VehicleDetectionController extends GetxController{
     _accelerometerSubscription = _repository.accelerometerStream.listen((event) {
       if (isCollectingData.value) {
         accelerometerStreamController.sink.add(event);
-        _detectVehicleStateByAccelerometer(event); // Renomeado para clareza
+        _detectVehicleState(event); // Renomeado para clareza
         accelerometerDisplay.value = 'Accel\nX: ${event.x.toStringAsFixed(2)}\nY: ${event.y.toStringAsFixed(2)}\nZ: ${event.z.toStringAsFixed(2)}';
       }
     });
@@ -80,7 +82,7 @@ class VehicleDetectionController extends GetxController{
         );
 
         // Se a distância for maior que o nosso limite, consideramos como movimento
-        if (distance > _locationMovementThresholdMeters) {
+        if (distance > _locationThreshold) {
           print('Movimento detectado por GPS: ${distance.toStringAsFixed(1)}m');
           // Se o GPS detecta movimento, o estado DEVE ser "moving".
           // Isso cancela qualquer timer de parada que estivesse rodando.
@@ -111,8 +113,8 @@ class VehicleDetectionController extends GetxController{
             });
       }
     } else{
-        _stopDetectionTimer?.cancel();
-        _updateActualVehicleState(VehicleState.moving);
+      _stopDetectionTimer?.cancel();
+      _updateActualVehicleState(VehicleState.moving);
 
     }
   }
@@ -146,136 +148,71 @@ class VehicleDetectionController extends GetxController{
     }
   }
 
-  Future<void> onAppResumed()
-  // Public getter for data collection status
-  bool get isCollectingData => _isCollectingData;
-  VehicleState get currentVehicleState => _vehicleState;
-
-
-  // Timer for periodic data processing
-  Timer? _detectionTimer;
-
-  // Callbacks to notify UI or main logic
-  Function(VehicleState)? onVehicleStateChanged;
-  Function(String, String)? onInfoDialogRequested;
-
-  VehicleDetectionController(this._sensorDataRepository) {
-    _listenToSensorData();
-    _startDetectionTimer();
-  }
-
-  void _listenToSensorData() {
-    _sensorDataRepository.accelerometerStream.listen((event) {
-      double magnitude = (event.x * event.x + event.y * event.y + event.z * event.z);
-      _updateAccelerationHistory(magnitude);
-    });
-
-    _sensorDataRepository.locationStream.listen((position) {
-      if (_lastLat != 0 && _lastLon != 0) {
-        double distance = Geolocator.distanceBetween(_lastLat, _lastLon, position.latitude, position.longitude);
-        _updateLocationHistory(distance);
-      }
-    });
-  }
-
-  void _updateAccelerationHistory(double magnitude) {
-    _accelerationHistory.add(magnitude);
-    if (_accelerationHistory.length > _historySize) {
-      _accelerationHistory.removeAt(0);
+  Future<void> onAppResumed() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (prefs.getBool('checkinConfirmed') ?? false) {
+      await prefs.remove('checkinConfirmed');
+      _confirmCheckin();
     }
   }
 
-  void _updateLocationHistory(double distance) {
-    _locationHistory.add(distance);
-    if (_locationHistory.length > _historySize) {
-      _locationHistory.removeAt(0);
+  Future<void>_restoreStatus() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (prefs.getBool('checkinConfirmed') ?? false) {
+      checkinStatus.value = CheckinStatus.confirmed;
+
     }
   }
 
-  bool _isVehicleMoving() {
-    if (_accelerationHistory.length < 3 && _locationHistory.length < 3) {
-      return false; // Insufficient data for a robust decision
-    }
-
-    // Check movement based on acceleration (variance)
-    bool accelerationMovement = false;
-    if (_accelerationHistory.length >= 3) {
-      double avgAcceleration = _accelerationHistory.reduce((a, b) => a + b) / _accelerationHistory.length;
-      double variance = 0;
-      for (double acc in _accelerationHistory) {
-        variance += (acc - avgAcceleration) * (acc - avgAcceleration);
-      }
-      variance /= _accelerationHistory.length;
-      accelerationMovement = variance > _movementThreshold;
-    }
-
-    // Check movement based on location (coordinate change)
-    bool locationMovement = false;
-    if (_locationHistory.length >= 3) {
-      double totalDistance = _locationHistory.reduce((a, b) => a + b);
-      locationMovement = totalDistance > 5; // Assuming distanceFilter of Geolocator gives distance in meters
-    }
-
-    return accelerationMovement || locationMovement;
+  void _confirmCheckin() {
+    _parkedTimer?.cancel();
+    _alertTimer?.cancel();
+    AwesomeNotifications().cancel(1);
+    checkinStatus.value = CheckinStatus.confirmed;
   }
 
-  void _startDetectionTimer() {
-    _detectionTimer = Timer.periodic(const Duration(seconds: 1), (timer) async {
-      // Determine vehicle state
-      bool isMoving = _isVehicleMoving();
-      VehicleState newState = isMoving ? VehicleState.moving : VehicleState.stopped;
+  void _onCarStopped() {
+    _resetAllTimersAndNotifications();
+    checkinStatus.value = CheckinStatus.pending;
+    checkinSeconds.value = 30;
 
-      // Notify vehicle state change
-      if (newState != _vehicleState) {
-        _vehicleState = newState;
-        onVehicleStateChanged?.call(newState); // Call the callback
-      }
-
-      // Check if location has changed significantly to pause collection
-      bool locationChanged = _hasLocationChangedSignificantly();
-
-      if (!locationChanged) {
-        _unchangedLocationCount++;
+    _parkedTimer = Timer.periodic(const Duration(seconds: 1), (t) {
+      if (checkinSeconds.value > 0) {
+        checkinSeconds.value--;
       } else {
-        _unchangedLocationCount = 0;
-        _lastLat = _sensorDataRepository.lat; // Update last known position from repository
-        _lastLon = _sensorDataRepository.lon;
-      }
-
-      if (_unchangedLocationCount >= _maxUnchangedLocations && _vehicleState == VehicleState.stopped) {
-        if (_isCollectingData) { // Only trigger if state is changing
-          _isCollectingData = false; // Set internal state to not collecting
-          onInfoDialogRequested?.call('Coleta pausada', 'Veículo parado por muito tempo. Coleta de dados pausada.');
-        }
-      } else {
-        if (!_isCollectingData) { // If it was paused and now moving/location changed
-          resumeDataCollection();
-          onInfoDialogRequested?.call('Coleta de dados reativada', 'Veículo em movimento. Coleta de dados reativada.');
-        }
-      }
-
-      // Store data in the database if collecting
-      if (_isCollectingData) {
-        await _sensorDataRepository.saveCurrentSensorData();
+        t.cancel();
+        _showCheckinNotification();
       }
     });
   }
 
-  bool _hasLocationChangedSignificantly() {
-    double latDiff = (_sensorDataRepository.lat - _lastLat).abs();
-    double lonDiff = (_sensorDataRepository.lon - _lastLon).abs();
-    return latDiff > _locationThreshold || lonDiff > _locationThreshold;
+  void _onCarMoving() {
+    _resetAllTimersAndNotifications();
+    checkinStatus.value = CheckinStatus.idle;
   }
 
-  // Method to manually resume data collection or when the vehicle starts moving again
-  void resumeDataCollection() {
-    _isCollectingData = true; // Set internal state to collecting
-    _unchangedLocationCount = 0;
-    // The timer is already periodic, so no need to restart it here, just update the flag.
+  void _resetAllTimersAndNotifications(){
+    _parkedTimer?.cancel();
+    _alertTimer?.cancel();
+    checkinSeconds.value = 0;
+    alertSeconds.value = 0;
+    AwesomeNotifications().cancelAll();
+  }
+  Future<void> onAppResumed() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (prefs.getBool('checkinConfirmed') ?? false) {
+      await prefs.remove('checkinConfirmed');
+      _confirmCheckin();
+    }
   }
 
-  void dispose() {
-    _detectionTimer?.cancel();
-    // No need to dispose streams here, as they are managed by SensorDataRepository
-  }
+  Future<void> _restoreStatus() async { /* ... */ }
+  void _confirmCheckin() { /* ... */ }
+  Future<void> _showCheckinNotification() async { /* ... */ }
+  void _startAlertCountdown() { /* ... */ }
+  Future<void> _showDangerNotification() async { /* ... */ }
+  void _pauseDataCollection() { /* ... */ }
+  void _resumeDataCollection() { /* ... */ }
+
 }
+

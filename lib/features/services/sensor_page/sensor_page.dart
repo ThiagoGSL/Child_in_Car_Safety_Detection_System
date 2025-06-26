@@ -73,7 +73,7 @@ class MyApp extends StatelessWidget {
 
 
 enum CheckinStatus { idle, pending, confirmed, timeout }
-enum VehicleState { moving, stopped, unknown } // Para o status de movimento real
+enum VehicleState { moving, stopped} // Para o status de movimento real
 
 
 class SensorGraph extends StatefulWidget {
@@ -256,7 +256,7 @@ class _SensorPageState extends State<SensorPage> with WidgetsBindingObserver {
   String _locationDisplay = 'Lat: 0.000000\nLon: 0.000000';
 
   // Status do movimento real do veículo (determinado pelos sensores)
-  VehicleState _actualVehicleState = VehicleState.unknown;
+  VehicleState _actualVehicleState = VehicleState.stopped;
   // Flag para indicar se a coleta de dados está ativa (para economia de energia)
   bool _isCollectingData = true;
 
@@ -571,13 +571,11 @@ class _SensorPageState extends State<SensorPage> with WidgetsBindingObserver {
     final vehicleStateLabels = {
       VehicleState.moving: '🚗 Em movimento (Detectado)',
       VehicleState.stopped: '⏸️ Parado (Detectado)',
-      VehicleState.unknown: '❓ Analisando Estado do Veículo...',
     };
 
     final vehicleStateColors = {
       VehicleState.moving: Colors.green,
       VehicleState.stopped: Colors.red,
-      VehicleState.unknown: Colors.grey,
     };
 
     return Scaffold(
