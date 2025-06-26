@@ -3,6 +3,7 @@ import 'package:app_v0/features/cadastro/form_controller.dart';
 import 'package:app_v0/features/home/components/pulsing_card.dart';
 import 'package:app_v0/features/home/components/timeline_tile.dart';
 import 'package:app_v0/features/main_page/main_page_controller.dart';
+import 'package:app_v0/features/state_machine/state_machine_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:auto_size_text/auto_size_text.dart';
@@ -15,6 +16,7 @@ class HomePage extends StatelessWidget {
     final BluetoothController bleController = Get.find<BluetoothController>();
     final FormController formController = Get.find<FormController>();
     final MainPageController mainPageController = Get.find<MainPageController>();
+    final StateMachineController stateMachineController = Get.find<StateMachineController>();
     final Color accentColor = const Color(0xFF53BF9D);
 
     return Scaffold(
@@ -62,6 +64,25 @@ class HomePage extends StatelessWidget {
                     ),
                   );
                 }
+              }),
+              const SizedBox(height: 10),
+              Obx(() {
+                final currentState = stateMachineController.estadoAtual.value;
+                return RichText(
+                  text: TextSpan(
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                    children: [
+                      const TextSpan(
+                        text: 'Estado Atual: ',
+                        style: TextStyle(color: Colors.white, fontSize: 16),
+                      ),
+                      TextSpan(
+                        text: stateMachineController.currentState_toString(currentState),
+                        style: TextStyle(color: accentColor, fontSize: 16),
+                      ),
+                    ],
+                  ),
+                );
               }),
               const SizedBox(height: 10),
               const Text(
