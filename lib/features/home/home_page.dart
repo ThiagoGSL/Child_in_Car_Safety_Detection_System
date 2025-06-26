@@ -5,6 +5,7 @@ import 'package:app_v0/features/home/components/timeline_tile.dart';
 import 'package:app_v0/features/main_page/main_page_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:auto_size_text/auto_size_text.dart';
 
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
@@ -28,20 +29,28 @@ class HomePage extends StatelessWidget {
               Obx(() {
                 final childName = formController.childName.value;
                 if (childName.isNotEmpty) {
-                  return RichText(
-                    text: TextSpan(
-                      style: const TextStyle(fontWeight: FontWeight.bold),
-                      children: [
-                        const TextSpan(
-                          text: 'Monitorando ',
-                          style: TextStyle(color: Colors.white, fontSize: 22),
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Monitorando',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
                         ),
-                        TextSpan(
-                          text: childName,
-                          style: TextStyle(color: accentColor, fontSize: 24),
+                      ),
+                      AutoSizeText(
+                        childName,
+                        maxLines: 1, 
+                        style: TextStyle(
+                          color: accentColor,
+                          fontSize: 24, 
+                          fontWeight: FontWeight.bold,
                         ),
-                      ],
-                    ),
+                        minFontSize: 12, 
+                      ),
+                    ],
                   );
                 } else {
                   return const Text(
