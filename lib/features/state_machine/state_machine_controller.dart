@@ -18,7 +18,8 @@ enum EstadoApp {
   notificacaoinicial,
   alerta,
   perdadeconexao,
-  relembrando
+  relembrando,
+  esperando
 }
 
 class StateMachineController extends GetxController {
@@ -127,10 +128,16 @@ class StateMachineController extends GetxController {
           break;
 
         case EstadoApp.notificacaoinicial:
-          if (_carroController.andando.value) {
+          if (!_deteccaoController.semResposta.value) {
+            estadoAtual.value = EstadoApp.monitorando;
+            _deteccaoController.tempoSeguroExpirado.value = false;
+          } else if (!_deteccaoController.temBebe.value) {
+            estadoAtual.value = EstadoApp.esperando;
+          } else if (!_deteccaoController.faceDetectada.value) {
+            estadoAtual.value = EstadoApp.conectado;
+          } else if (_carroController.andando.value) {
             estadoAtual.value = EstadoApp.carroandando;
-          }
-          else if (_deteccaoController.semResposta.value) {
+          } else if (_deteccaoController.semResposta.value) {
             estadoAtual.value = EstadoApp.alerta;
           }
           break;
@@ -138,23 +145,35 @@ class StateMachineController extends GetxController {
         case EstadoApp.perdadeconexao:
           if (_bluetoothController.conectado.value) {
             estadoAtual.value = EstadoApp.monitorando;
-          }
-          else if (_deteccaoController.semResposta.value) {
+          } else if (!_deteccaoController.semResposta.value) {
+            estadoAtual.value = EstadoApp.relembrando;
+          } else if (_deteccaoController.semResposta.value) {
             estadoAtual.value = EstadoApp.alerta;
           }
           break;
 
         case EstadoApp.relembrando:
-          if (!_deteccaoController.temBebe.value) {
+          if (!_deteccaoController.temBebe.value || !_deteccaoController.semResposta.value) {
             estadoAtual.value = EstadoApp.idle;
-          }
-          else if (_deteccaoController.semResposta.value) {
+          } else if (_bluetoothController.conectado.value) {
+            estadoAtual.value = EstadoApp.conectado;
+          } else if (_deteccaoController.temBebe.value) {
+            estadoAtual.value = EstadoApp.relembrando;
+          } else if (_deteccaoController.semResposta.value) {
             estadoAtual.value = EstadoApp.alerta;
           }
           break;
 
+        case EstadoApp.esperando:
+          if (!_bluetoothController.conectado.value) {
+            estadoAtual.value = EstadoApp.idle;
+          break;
+            
         case EstadoApp.alerta:
         // A saída do alerta é intencionalmente gerida apenas por uma ação explícita do usuário.
+          if (!_deteccaoController.semResposta.value) {
+            estadoAtual.value = EstadoApp.idle;
+          }
           break;
       }
 
@@ -309,6 +328,9 @@ class StateMachineController extends GetxController {
 
       case EstadoApp.relembrando:
         return "Relembrando";
+      
+      case EstadoApp.esperando:
+        return "Esperando";
     }
   }
 }
