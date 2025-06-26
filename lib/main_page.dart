@@ -14,7 +14,15 @@ class MainPage extends StatelessWidget {
       builder: (controller) {
         return Scaffold(
           appBar: AppBar(
-            title: Text('ForgottenBaby'),
+            title: Row(children: [
+              Icon(Icons.child_care,
+              color: Colors.white,
+              ),
+              const SizedBox(width: 8),
+              Text('ForgottenBaby'),
+            ],
+
+            ),
             backgroundColor: Colors.blue[900],
             foregroundColor: Colors.white,
             actions: [

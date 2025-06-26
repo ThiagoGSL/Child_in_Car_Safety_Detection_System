@@ -1,16 +1,11 @@
-// lib/services/sensor_data_repository.dart
-
+// lib/services/sensores_service.dart
 import 'dart:async';
-import 'package:flutter/material.dart'; // Needed for WidgetsBindingObserver in some contexts, but not directly used here
 import 'package:sensors_plus/sensors_plus.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:permission_handler/permission_handler.dart';
-import '../services/Database_helper.dart'; // Path to your Database_helper
-
+// import '../services/Database_helper.dart'; // Descomente e ajuste o path se estiver usando
 
 class SensorDataRepository {
-  // Sensor variables (for external access or display)
-  double vx = 0, vy = 0, vz = 0; // Velocity - typically derived, not directly from sensors_plus
   double ax = 0, ay = 0, az = 0;
   double gx = 0, gy = 0, gz = 0;
   double lat = 0, lon = 0;
@@ -24,8 +19,7 @@ class SensorDataRepository {
   final _locationController = StreamController<Position>.broadcast();
   Stream<Position> get locationStream => _locationController.stream;
 
-  // Database helper
-  final dbHelper = DatabaseHelper();
+  // final dbHelper = DatabaseHelper(); // Descomente para usar o banco
 
   SensorDataRepository() {
     _initializeSensors();
@@ -42,37 +36,31 @@ class SensorDataRepository {
 
   void _listenToSensorEvents() {
     accelerometerEvents.listen((event) {
-      ax = event.x;
-      ay = event.y;
-      az = event.z;
-      _accelerometerController.add(event); // Add to stream
+      ax = event.x; ay = event.y; az = event.z;
+      _accelerometerController.add(event);
     });
 
     gyroscopeEvents.listen((event) {
-      gx = event.x;
-      gy = event.y;
-      gz = event.z;
-      _gyroscopeController.add(event); // Add to stream
+      gx = event.x; gy = event.y; gz = event.z;
+      _gyroscopeController.add(event);
     });
 
     Geolocator.getPositionStream(
       locationSettings: const LocationSettings(
         accuracy: LocationAccuracy.high,
-        distanceFilter: 2, // Minimum distance to update (meters)
-        timeLimit: Duration(seconds: 180), // Timeout for obtaining position
+        distanceFilter: 2, // Atualiza a cada 2 metros movidos
       ),
     ).listen((Position position) {
-      lat = position.latitude;
-      lon = position.longitude;
-      _locationController.add(position); // Add to stream
+      lat = position.latitude; lon = position.longitude;
+      _locationController.add(position);
     });
   }
 
-  // Method to save current sensor data to the database
   Future<void> saveCurrentSensorData() async {
-    await dbHelper.inserirAcelerometro(ax, ay);
-    await dbHelper.inserirGiroscopio(gx, gy);
-    await dbHelper.inserirLocalizacao(lat, lon);
+    // await dbHelper.inserirAcelerometro(ax, ay);
+    // await dbHelper.inserirGiroscopio(gx, gy);
+    // await dbHelper.inserirLocalizacao(lat, lon);
+    // print('Dados salvos no banco.'); // Log de depuração
   }
 
   void dispose() {

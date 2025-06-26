@@ -24,10 +24,21 @@ class SplashPage extends StatelessWidget {
                 colors: AppColors.blueGradient,
               )
             ),
-            child:Text(
-              'ForgottenBaby',
-              style: AppTextStyles.bigText.copyWith(color: AppColors.white)
-              ),
+            child:Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.child_care,
+                  color: AppColors.white,
+                  size: 48,
+                ),
+                const SizedBox(width: 12),
+                Text(
+                    'ForgottenBaby',
+                    style: AppTextStyles.bigText.copyWith(color: AppColors.white)
+                ),
+              ],
+            )
             ),
           );
       }
