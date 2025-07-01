@@ -1,6 +1,7 @@
 // lib/features/splash/splash_controller.dart
 
 import 'dart:async'; // Importe para usar o Future.wait
+import 'package:app_v0/features/state_machine/external_controllers.dart';
 import 'package:get/get.dart';
 
 // Importe todos os controllers
@@ -26,7 +27,6 @@ class SplashPageController extends GetxController {
       Future.delayed(const Duration(seconds: 3)),
       _loadDependencies(),
     ]);
-
     // Após a conclusão de tudo, navega para a página principal.
     Get.off(() => const MainPage(), transition: Transition.fadeIn);
   }
@@ -42,6 +42,8 @@ class SplashPageController extends GetxController {
     Get.put(NotificationController(), permanent: true);
     Get.put(MainPageController(), permanent: true);
     Get.put(BluetoothController(), permanent: true);
+    Get.put(CarroController(), permanent: true);
+    Get.put(DeteccaoController(), permanent: true);
     Get.put(StateMachineController(), permanent: true);
     print("--- Fase 1: Concluída.");
 

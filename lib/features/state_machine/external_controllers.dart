@@ -6,12 +6,6 @@ import 'package:get/get.dart';
  * sensores (GPS, acelerómetro) ou outras fontes de dados.
  */
 
-/// Simula a gestão da conexão Bluetooth com o hardware do carro.
-class BluetoothController extends GetxController {
-  /// `true` se o dispositivo estiver ativamente conectado via Bluetooth.
-  final conectado = false.obs;
-}
-
 /// Simula a deteção do movimento do veículo.
 class CarroController extends GetxController {
   /// `true` se o veículo estiver em movimento.

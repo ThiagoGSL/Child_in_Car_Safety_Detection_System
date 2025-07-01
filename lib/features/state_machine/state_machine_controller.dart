@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:app_v0/features/bluetooth/ble_controller.dart';
 import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 import 'external_controllers.dart';
@@ -57,7 +58,7 @@ class StateMachineController extends GetxController {
 
     // Registra listeners para as variáveis de estado externas.
     // Qualquer alteração nelas dispara uma reavaliação da máquina de estados.
-    ever(_bluetoothController.conectado, (_) => _avaliarEstado());
+    ever(_bluetoothController.isConnected, (_) => _avaliarEstado());
     ever(_carroController.andando, (_) => _avaliarEstado());
     ever(_deteccaoController.faceDetectada, (_) => _avaliarEstado());
     ever(_deteccaoController.temBebe, (_) => _avaliarEstado());
@@ -94,15 +95,17 @@ class StateMachineController extends GetxController {
         case EstadoApp.idle:
           if (_deteccaoController.temBebe.value) {
             estadoAtual.value = EstadoApp.relembrando;
-          } else if (_bluetoothController.conectado.value) {
+          } else if (_bluetoothController.isConnected.value) {
             estadoAtual.value = EstadoApp.conectado;
           }
           break;
 
         case EstadoApp.conectado:
-          if (!_bluetoothController.conectado.value) {
+          print(_carroController.andando.value);
+          if (!_bluetoothController.isConnected.value) {
             estadoAtual.value = EstadoApp.idle;
-          } else if (_carroController.andando.value) {
+          } 
+          else if (_carroController.andando.value) {
             estadoAtual.value = EstadoApp.carroandando;
           } else if (_deteccaoController.faceDetectada.value) {
             estadoAtual.value = EstadoApp.monitorando;
@@ -116,7 +119,7 @@ class StateMachineController extends GetxController {
           break;
 
         case EstadoApp.monitorando:
-          if (!_bluetoothController.conectado.value) {
+          if (!_bluetoothController.isConnected.value) {
             estadoAtual.value = EstadoApp.perdadeconexao;
           } else if (_carroController.andando.value) {
             estadoAtual.value = EstadoApp.carroandando;
@@ -143,7 +146,7 @@ class StateMachineController extends GetxController {
           break;
 
         case EstadoApp.perdadeconexao:
-          if (_bluetoothController.conectado.value) {
+          if (_bluetoothController.isConnected.value) {
             estadoAtual.value = EstadoApp.monitorando;
           } else if (!_deteccaoController.semResposta.value) {
             estadoAtual.value = EstadoApp.relembrando;
@@ -155,7 +158,7 @@ class StateMachineController extends GetxController {
         case EstadoApp.relembrando:
           if (!_deteccaoController.temBebe.value || !_deteccaoController.semResposta.value) {
             estadoAtual.value = EstadoApp.idle;
-          } else if (_bluetoothController.conectado.value) {
+          } else if (_bluetoothController.isConnected.value) {
             estadoAtual.value = EstadoApp.conectado;
           } else if (_deteccaoController.temBebe.value) {
             estadoAtual.value = EstadoApp.relembrando;
@@ -165,8 +168,9 @@ class StateMachineController extends GetxController {
           break;
 
         case EstadoApp.esperando:
-          if (!_bluetoothController.conectado.value) {
+          if (!_bluetoothController.isConnected.value) {
             estadoAtual.value = EstadoApp.idle;
+          }
           break;
             
         case EstadoApp.alerta:
@@ -303,7 +307,8 @@ class StateMachineController extends GetxController {
     }
   }
 
-  String currentState_toString(EstadoApp currentState) {
+  // **FUNÇÃO CORRIGIDA E MOVIDA PARA DENTRO DA CLASSE**
+  String currentStateToString(EstadoApp currentState) {
     switch (currentState) {
       case EstadoApp.idle:
         return "Idle";

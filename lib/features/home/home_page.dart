@@ -77,7 +77,8 @@ class HomePage extends StatelessWidget {
                         style: TextStyle(color: Colors.white, fontSize: 16),
                       ),
                       TextSpan(
-                        text: stateMachineController.currentState_toString(currentState),
+                        // **CHAMADA ATUALIZADA AQUI**
+                        text: stateMachineController.currentStateToString(currentState),
                         style: TextStyle(color: accentColor, fontSize: 16),
                       ),
                     ],
