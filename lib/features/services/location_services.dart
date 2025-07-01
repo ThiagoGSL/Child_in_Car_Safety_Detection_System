@@ -31,7 +31,7 @@ class LocationRepository {
       });
     } else {
       print("Location permission denied.");
-      // You might want to add an error to the stream or a callback for UI notification
+      // You might want to add an error to the stream or a callback for UI notification_ext
       if (!_locationController.isClosed) {
         _locationController.addError('Location permission denied.');
       }

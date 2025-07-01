@@ -1,52 +1,50 @@
-package com.example.app_v0 // **VERIFIQUE E AJUSTE ESTE PACOTE SE NECESSÁRIO**
+package com.example.app_v0
 
 import android.Manifest
 import android.content.pm.PackageManager
-import android.os.Bundle
 import android.telephony.SmsManager
-import androidx.core.app.ActivityCompat
+import android.util.Log
 import androidx.core.content.ContextCompat
-
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 
-
 class MainActivity: FlutterActivity() {
-    private val CHANNEL = "com.seuapp.sms/send" // Canal de comunicação
+    // Usaremos um único canal, dedicado para esta função pura.
+    private val SMS_CHANNEL = "com.seuapp.sms/send_direct"
+    private val TAG = "SMS_PURO_NATIVO"
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
 
-        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CHANNEL)
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, SMS_CHANNEL)
             .setMethodCallHandler { call, result ->
-                if (call.method == "sendSms") {
+                if (call.method == "send") {
                     val number: String? = call.argument("number")
                     val message: String? = call.argument("message")
-                    if (number != null && message != null) {
-                        sendSms(number, message, result)
-                    } else {
+
+                    if (number == null || message == null) {
                         result.error("INVALID_ARGS", "Número ou mensagem nulos", null)
+                        return@setMethodCallHandler
+                    }
+
+                    if (ContextCompat.checkSelfPermission(this, Manifest.permission.SEND_SMS) == PackageManager.PERMISSION_GRANTED) {
+                        try {
+                            Log.d(TAG, "Permissão OK. Enviando SMS com SmsManager.getDefault()...")
+                            @Suppress("DEPRECATION")
+                            SmsManager.getDefault().sendTextMessage(number, null, message, null, null)
+                            result.success("SMS_SENT_OK")
+                        } catch (e: Exception) {
+                            Log.e(TAG, "ERRO no envio: ${e.message}")
+                            result.error("ERROR_SMS", e.message, null)
+                        }
+                    } else {
+                        Log.e(TAG, "ERRO DE PERMISSÃO no envio!")
+                        result.error("NO_PERMISSION", "Permissão de SMS negada", null)
                     }
                 } else {
                     result.notImplemented()
                 }
             }
-    }
-
-    private fun sendSms(number: String, message: String, result: MethodChannel.Result) {
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.SEND_SMS)
-            != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.SEND_SMS), 0)
-            result.error("NO_PERMISSION", "Permissão SEND_SMS não concedida", null)
-            return
-        }
-
-        try {
-            SmsManager.getDefault().sendTextMessage(number, null, message, null, null)
-            result.success("SMS_ENVIADO")
-        } catch (e: Exception) {
-            result.error("SMS_ERROR", e.message, null)
-        }
     }
 }
