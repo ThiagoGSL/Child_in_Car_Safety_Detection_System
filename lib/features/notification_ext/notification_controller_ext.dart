@@ -1,17 +1,14 @@
-// lib/features/notification_ext/notification_ext_controller.dart
-
 import 'package:awesome_notifications/awesome_notifications.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:app_v0/features/cadastro/form_controller.dart';
+import 'package:app_v0/features/cadastro/form_controller.dart'; // Importe seu FormController
 
-// As funções de callback precisam ficar fora da classe para rodar em background.
+// Funções de callback de background
 @pragma('vm:entry-point')
-Future<void> onNotificationDisplayedMethod(
-    ReceivedNotification receivedNotification) async {
-  // print('Notificação ${receivedNotification.id} exibida no celular.');
+Future<void> onNotificationDisplayedMethod(ReceivedNotification receivedNotification) async {
+  print('Notificação ${receivedNotification.id} exibida no celular.');
 }
 
 @pragma('vm:entry-point')
@@ -22,8 +19,6 @@ Future<void> onActionReceivedMethod(ReceivedAction receivedAction) async {
     await AwesomeNotifications().cancel(10);
   }
 }
-
-
 //==============================================================================
 //====== GUIA RÁPIDO (README) DE USO DO NOTIFICATIONEXTCONTROLLER ==============
 //==============================================================================
@@ -74,23 +69,114 @@ Future<void> onActionReceivedMethod(ReceivedAction receivedAction) async {
 //==============================================================================
 
 class NotificationExtController extends GetxController {
-  // --- VARIÁVEIS DE ESTADO ---
-
   final isCheckinConfirmed = false.obs;
   static const _smsChannel = MethodChannel('com.seuapp.sms/send_direct');
 
-  // --- MÉTODOS PÚBLICOS (API do Controller) ---
-
-  /// Orquestra o ALERTA DE EMERGÊNCIA COMPLETO.
+  /// NOTIFICAÇÃO DE ALERTA
   Future<void> triggerFullEmergencyAlert() async {
-    final bool smsSuccess = await _sendPureSms();
+    //print("Iniciando fluxo de alerta completo...");
+
+    // 1. Tenta enviar o SMS primeiro.
+    final bool smsSuccess = await sendPureSms();
+
+    // 2. Se o envio do SMS foi despachado com sucesso, mostra a notificação.
     if (smsSuccess) {
+      //print("Comando de SMS enviado. Exibindo notificação de alerta.");
+
+      // Adicionamos uma pequena pausa para garantir que o sistema operacional
+      // não se sobrecarregue, dando um "respiro" entre as duas ações.
       await Future.delayed(const Duration(milliseconds: 500));
-      await _showAwesomeEmergencyAlert();
+
+      await showEmergencyAlertNotification();
+    } else {
+      //print("Fluxo de alerta interrompido pois o envio de SMS falhou.");
     }
   }
 
-  /// Mostra a NOTIFICAÇÃO DE CHECK-IN (pergunta "Está tudo bem?").
+  /// Método para enviar SMS
+  Future<bool> sendPureSms() async {
+    final FormController formController = Get.find();
+    final number = formController.emergencyPhone.value;
+    if (number.isEmpty) {
+      print('Erro no Controller: Número de emergência não configurado.');
+      return false;
+    }
+    /// MENSAGEM QUE APARECE NO SMS
+    final message = 'Mensagem de teste puro.';
+    try {
+      print("Controller chamando o canal nativo para enviar SMS para: $number");
+      final result = await _smsChannel.invokeMethod('send', {
+        'number': number,
+        'message': message,
+      });
+      print("Controller recebeu o resultado do canal nativo: $result");
+      return true;
+    } on PlatformException catch (e) {
+      print("Controller encontrou um erro ao chamar canal nativo: ${e.message}");
+      return false;
+    }
+  }
+
+  // Método para mostrar a notificação de alerta
+  Future<void> showEmergencyAlertNotification() async {
+    await AwesomeNotifications().createNotification(
+      content: NotificationContent(
+        id: 20,
+        channelKey: 'alert_channel',
+        title: '🚨 ALERTA DE EMERGÊNCIA 🚨',
+        body: 'Ação de emergência reportada e SMS enviado para contato.',
+        notificationLayout: NotificationLayout.Default,
+        backgroundColor: Colors.red,
+      ),
+    );
+  }
+
+  // --- O resto do seu controller ---
+  @override
+  void onInit() {
+    super.onInit();
+    _loadCheckinConfirmationFromPrefs();
+  }
+
+  Future<void> _loadCheckinConfirmationFromPrefs() async {
+    final prefs = await SharedPreferences.getInstance();
+    isCheckinConfirmed.value = prefs.getBool('isCheckinConfirmed') ?? false;
+  }
+
+  void resetCheckinState() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('isCheckinConfirmed', false);
+    isCheckinConfirmed.value = false;
+  }
+
+  Future<void> init() async {
+    await AwesomeNotifications().initialize(
+      null,
+      [
+        NotificationChannel(
+          channelKey: 'checkin_channel',
+          channelName: 'Verificação de Veículo',
+          channelDescription: '...',
+          importance: NotificationImportance.High,
+          playSound: true,
+        ),
+        NotificationChannel(
+          channelKey: 'alert_channel',
+          channelName: 'Alerta de Emergência',
+          channelDescription: '...',
+          importance: NotificationImportance.Max,
+          playSound: true,
+          defaultColor: Colors.red,
+          ledColor: Colors.white,
+        ),
+      ],
+      debug: true,
+    );
+    AwesomeNotifications().setListeners(
+      onActionReceivedMethod: onActionReceivedMethod,
+      onNotificationDisplayedMethod: onNotificationDisplayedMethod,
+    );
+  }
   Future<void> showCheckinNotification() async {
     resetCheckinState();
     await AwesomeNotifications().createNotification(
@@ -111,89 +197,8 @@ class NotificationExtController extends GetxController {
       ],
     );
   }
-
-  /// Cancela TODAS as notificações que este app criou.
+  /// CANCELA TODAS AS NOTIFICAÇÕES
   Future<void> cancelAllNotifications() async {
     await AwesomeNotifications().cancelAll();
-  }
-
-  // --- MÉTODOS INTERNOS E DE INICIALIZAÇÃO ---
-
-  @override
-  void onInit() {
-    super.onInit();
-    _loadCheckinConfirmationFromPrefs();
-  }
-
-  Future<void> init() async {
-    await AwesomeNotifications().initialize(
-      null,
-      [
-        NotificationChannel(
-          channelKey: 'checkin_channel',
-          channelName: 'Verificação de Veículo',
-          channelDescription: 'Canal para notificações de verificação de segurança.',
-          importance: NotificationImportance.High,
-          playSound: true,
-        ),
-        NotificationChannel(
-          channelKey: 'alert_channel',
-          channelName: 'Alerta de Emergência',
-          channelDescription: 'Canal para alertas visuais de emergência.',
-          importance: NotificationImportance.Max,
-          playSound: true,
-          defaultColor: Colors.red,
-          ledColor: Colors.white,
-        ),
-      ],
-      debug: false,
-    );
-    AwesomeNotifications().setListeners(
-      onActionReceivedMethod: onActionReceivedMethod,
-      onNotificationDisplayedMethod: onNotificationDisplayedMethod,
-    );
-  }
-
-  Future<bool> _sendPureSms() async {
-    final FormController formController = Get.find();
-    final number = formController.emergencyPhone.value;
-    if (number.isEmpty) {
-      return false;
-    }
-    final message =
-        '🚨 Alerta de perigo! Uma atividade incomum foi detectada. Por favor, verifique a situação.';
-    try {
-      await _smsChannel.invokeMethod('send', {
-        'number': number,
-        'message': message,
-      });
-      return true;
-    } on PlatformException {
-      return false;
-    }
-  }
-
-  Future<void> _showAwesomeEmergencyAlert() async {
-    await AwesomeNotifications().createNotification(
-      content: NotificationContent(
-        id: 20,
-        channelKey: 'alert_channel',
-        title: '🚨 ALERTA DE EMERGÊNCIA 🚨',
-        body: 'Ação de emergência reportada e SMS enviado para contato.',
-        notificationLayout: NotificationLayout.Default,
-        backgroundColor: Colors.red,
-      ),
-    );
-  }
-
-  Future<void> _loadCheckinConfirmationFromPrefs() async {
-    final prefs = await SharedPreferences.getInstance();
-    isCheckinConfirmed.value = prefs.getBool('isCheckinConfirmed') ?? false;
-  }
-
-  void resetCheckinState() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('isCheckinConfirmed', false);
-    isCheckinConfirmed.value = false;
   }
 }
