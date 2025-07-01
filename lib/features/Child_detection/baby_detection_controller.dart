@@ -25,16 +25,47 @@ class BabyDetectionController extends GetxController {
   // --- Getters ---
   bool get modelReady => isModelLoaded.value && !isLoadingModel.value;
 
-  @override
-  void onInit() {
-    super.onInit();
-    loadModel();
-  }
+  // --- MUDANÇA 1: onInit REMOVIDO ---
+  // O método onInit() foi removido. A inicialização agora é controlada
+  // externamente através do método init().
 
   @override
   void onClose() {
     _interpreter.close();
     super.onClose();
+  }
+
+  /// --- MUDANÇA 2: MÉTODO DE INICIALIZAÇÃO ASSÍNCRONO ---
+  /// Este método será chamado pelo SplashPageController para carregar o modelo.
+  Future<void> init() async {
+    if (isModelLoaded.value || isLoadingModel.value) {
+      print("ℹ️ Tentativa de carregar modelo que já está carregado ou em processo.");
+      return;
+    }
+
+    isLoadingModel.value = true;
+    errorLoadingModel.value = null;
+    print("⏳ Carregando modelo de detecção...");
+
+    try {
+      _interpreter = await Interpreter.fromAsset(
+        _modelPath,
+        options: InterpreterOptions()..threads = 2,
+      );
+
+      isModelLoaded.value = true;
+      errorLoadingModel.value = null;
+      print("✅ Modelo TFLite (BabyDetectionController) carregado com sucesso!");
+
+    } catch (e) {
+      errorLoadingModel.value = e.toString();
+      isModelLoaded.value = false;
+      print("❌ Falha ao carregar modelo (BabyDetectionController): $e");
+      // Propaga o erro para que o Future.wait no splash controller possa capturá-lo.
+      throw Exception("Falha ao carregar BabyDetectionController: $e");
+    } finally {
+      isLoadingModel.value = false;
+    }
   }
 
   /// Atualiza a fila de confianças recentes e recalcula a média.
@@ -66,7 +97,6 @@ class BabyDetectionController extends GetxController {
       final imageBytes = await imageFile.readAsBytes();
       final processedImage = await _preprocessImage(imageBytes);
       
-      // A saída do modelo é um array com um único valor de confiança.
       var output = List.filled(1, 0.0).reshape([1, 1]);
 
       _interpreter.run(processedImage, output);
@@ -96,33 +126,6 @@ class BabyDetectionController extends GetxController {
     }
   }
 
-  Future<void> loadModel() async {
-    if (isModelLoaded.value || isLoadingModel.value) {
-      return;
-    }
-
-    isLoadingModel.value = true;
-    errorLoadingModel.value = null;
-
-    try {
-      _interpreter = await Interpreter.fromAsset(
-        _modelPath,
-        options: InterpreterOptions()..threads = 2,
-      );
-
-      isModelLoaded.value = true;
-      errorLoadingModel.value = null;
-      print("✅ Modelo TFLite (tflite_flutter) carregado com sucesso!");
-
-    } catch (e) {
-      errorLoadingModel.value = e.toString();
-      isModelLoaded.value = false;
-      print("❌ Falha ao carregar modelo: $e");
-    } finally {
-      isLoadingModel.value = false;
-    }
-  }
-
   Future<List<List<List<List<double>>>>> _preprocessImage(Uint8List imageBytes) async {
     img.Image? originalImage = img.decodeImage(imageBytes);
 
@@ -130,8 +133,6 @@ class BabyDetectionController extends GetxController {
       throw Exception("Falha ao decodificar a imagem.");
     }
 
-    // A imagem já será convertida para um formato adequado pelo TFLite,
-    // mas redimensionar e normalizar é crucial.
     img.Image resizedImage = img.copyResize(
       originalImage,
       width: _inputSize,
@@ -139,13 +140,11 @@ class BabyDetectionController extends GetxController {
       interpolation: img.Interpolation.linear,
     );
 
-    // Converte a imagem para um buffer de 4D [1, 224, 224, 3] e normaliza os pixels.
     var input = List.generate(
       1, (i) => List.generate(
         _inputSize, (y) => List.generate(
           _inputSize, (x) {
             final pixel = resizedImage.getPixel(x, y);
-            // Normaliza os valores dos canais R, G, B para o intervalo [0, 1]
             return [pixel.r.toDouble() / 255.0, pixel.g.toDouble() / 255.0, pixel.b.toDouble() / 255.0];
           }
         ),

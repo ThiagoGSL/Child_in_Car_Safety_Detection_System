@@ -1,29 +1,37 @@
 import 'dart:io';
 import 'dart:typed_data';
+import 'package:app_v0/features/Child_detection/baby_detection_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 
 class PhotoController extends GetxController {
+  // Observável para a última foto
   var lastPhoto = Rx<File?>(null);
+  // Observável para o resultado da detecção
+  var detectionResult = Rx<Map<String, dynamic>?>(null);
+  // Observável para controlar o estado de processamento da imagem
+  var isProcessing = false.obs;
+
+  // Injetando o controller de detecção
+  final BabyDetectionController _babyDetectionController = Get.find();
 
   final String _lastPhotoFileName = 'last_received_photo.jpg';
 
-  // --- MUDANÇA 1: onInit AGORA É LEVE ---
-  // O método onInit agora está limpo. A lógica de inicialização foi
-  // movida para o novo método init() abaixo.
   @override
   void onInit() {
     super.onInit();
   }
 
-  // --- MUDANÇA 2: NOVO MÉTODO DE INICIALIZAÇÃO ASSÍNCRONO ---
-  /// Este método será chamado e aguardado ('awaited') pelo SplashPageController
-  /// durante a tela de carregamento do app.
   Future<void> init() async {
     print("PhotoController: Iniciando carregamento da última foto...");
     await loadLastPhoto();
+    // Se uma foto já existir, analisa ela na inicialização
+    if (lastPhoto.value != null) {
+      await analyzeLastPhoto();
+    }
     print("PhotoController: Inicialização concluída.");
   }
 
@@ -44,8 +52,9 @@ class PhotoController extends GetxController {
     }
   }
 
-  /// Salva a imagem recebida, sobrescrevendo a anterior.
+  /// Salva a imagem recebida e dispara a análise.
   Future<void> saveImage(Uint8List imageBytes) async {
+    isProcessing.value = true;
     try {
       final dir = await getApplicationDocumentsDirectory();
       final path = '${dir.path}/$_lastPhotoFileName';
@@ -53,7 +62,6 @@ class PhotoController extends GetxController {
       
       await file.writeAsBytes(imageBytes);
 
-      // Limpamos o cache da imagem para garantir que a nova versão seja exibida
       imageCache.clear();
       imageCache.clearLiveImages();
       
@@ -61,18 +69,59 @@ class PhotoController extends GetxController {
       lastPhoto.refresh();
       
       print('📸 Foto salva/sobrescrita em: $path');
+
+      // Após salvar, chama a análise da imagem
+      await analyzeLastPhoto();
+
     } catch (e) {
       print('❌ Erro ao salvar a imagem: $e');
+      detectionResult.value = {"error": "Falha ao salvar a imagem"};
+    } finally {
+      isProcessing.value = false;
     }
   }
 
-  /// Exclui a última foto salva.
+  /// Analisa a foto armazenada em `lastPhoto`.
+  Future<void> analyzeLastPhoto() async {
+    if (lastPhoto.value == null) {
+      print("⚠️ Nenhuma foto para analisar.");
+      return;
+    }
+
+    // Garante que o modelo esteja pronto antes de tentar a detecção
+    if (!_babyDetectionController.modelReady) {
+      print("⏳ Modelo não está pronto, aguardando...");
+      // Espera um pouco para o caso de o modelo ainda estar carregando
+      await Future.delayed(const Duration(seconds: 2)); 
+      if (!_babyDetectionController.modelReady) {
+        print("❌ Modelo ainda não está pronto após espera.");
+        detectionResult.value = {"error": "Modelo de IA não carregado"};
+        return;
+      }
+    }
+
+    print("🤖 Iniciando análise da imagem...");
+    isProcessing.value = true;
+    try {
+      final result = await _babyDetectionController.detectInImage(XFile(lastPhoto.value!.path));
+      detectionResult.value = result;
+      print("✅ Análise concluída: ${result['label']} com confiança de ${result['confidence']}");
+    } catch (e) {
+      print("❌ Erro durante a análise da imagem: $e");
+      detectionResult.value = {"error": "Falha na análise"};
+    } finally {
+      isProcessing.value = false;
+    }
+  }
+
+  /// Exclui a última foto salva e limpa o resultado.
   Future<void> deleteLastPhoto() async {
     final photo = lastPhoto.value;
     if (photo != null && await photo.exists()) {
       try {
         await photo.delete();
         lastPhoto.value = null; 
+        detectionResult.value = null; // Limpa o resultado da detecção
         Get.snackbar(
           'Sucesso!',
           'A foto foi excluída.',
