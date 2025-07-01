@@ -9,16 +9,11 @@ class NotificationController extends GetxController {
 
   final String _storageKey = 'notifications_history';
 
-  // --- MUDANÇA 1: onInit AGORA É LEVE ---
-  // A lógica de inicialização foi movida para o método init() abaixo.
   @override
   void onInit() {
     super.onInit();
   }
 
-  // --- MUDANÇA 2: NOVO MÉTODO DE INICIALIZAÇÃO ASSÍNCRONO ---
-  /// Este método será chamado e aguardado ('awaited') pelo SplashController
-  /// durante a tela de carregamento do app.
   Future<void> init() async {
     print("NotificationController: Iniciando carregamento do histórico de notificações...");
     await _loadNotificationsFromStorage();
