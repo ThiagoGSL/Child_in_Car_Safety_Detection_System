@@ -10,7 +10,7 @@ import 'package:app_v0/features/notification/notification_controller.dart';
 import 'package:app_v0/features/photos/photo_controller.dart';
 import 'package:app_v0/features/main_page/main_page_controller.dart';
 import 'package:app_v0/features/main_page/main_page.dart';
-import 'package:app_v0/features/car_moviment_verification/sensores_service_controller';
+import 'package:app_v0/features/car_moviment_verification/sensores_service_controller.dart';
 
 class SplashPageController extends GetxController {
   
