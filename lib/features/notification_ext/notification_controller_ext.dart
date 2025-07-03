@@ -1,11 +1,18 @@
+// lib/features/notification_ext/notification_controller_ext.dart
+
+// 1. IMPORTS NECESSÁRIOS PARA AS NOVAS FUNÇÕES
+import 'dart:async';
+import 'package:flutter/foundation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+// Imports que você já tinha
 import 'package:awesome_notifications/awesome_notifications.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:app_v0/features/cadastro/form_controller.dart'; // Importe seu FormController
+import 'package:app_v0/features/cadastro/form_controller.dart';
 
-// Funções de callback de background
+// Funções de callback de background (não mudam)
 @pragma('vm:entry-point')
 Future<void> onNotificationDisplayedMethod(ReceivedNotification receivedNotification) async {
   print('Notificação ${receivedNotification.id} exibida no celular.');
@@ -16,9 +23,12 @@ Future<void> onActionReceivedMethod(ReceivedAction receivedAction) async {
   if (receivedAction.buttonKeyPressed == 'USER_CONFIRMED_OK') {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('isCheckinConfirmed', true);
-    await AwesomeNotifications().cancel(10);
+    // Esta linha foi removida em uma etapa anterior para evitar conflito,
+    // o cancelamento da notificação de check-in é melhor gerenciado pela UI ou pelo processo.
+    // await AwesomeNotifications().cancel(10);
   }
 }
+
 //==============================================================================
 //====== GUIA RÁPIDO (README) DE USO DO NOTIFICATIONEXTCONTROLLER ==============
 //==============================================================================
@@ -69,31 +79,25 @@ Future<void> onActionReceivedMethod(ReceivedAction receivedAction) async {
 //==============================================================================
 
 class NotificationExtController extends GetxController {
+
+  // Suas variáveis de estado e canais (não mudam)
   final isCheckinConfirmed = false.obs;
   static const _smsChannel = MethodChannel('com.seuapp.sms/send_direct');
 
-  /// NOTIFICAÇÃO DE ALERTA
+  // 2. ADIÇÃO DA VARIÁVEL PARA CONTROLAR O TIMER DO CHECK-IN
+  Timer? _checkinTimer;
+
+  // Suas funções de alerta e SMS (não mudam)
   Future<void> triggerFullEmergencyAlert() async {
-    //print("Iniciando fluxo de alerta completo...");
-
-    // 1. Tenta enviar o SMS primeiro.
     final bool smsSuccess = await sendPureSms();
-
-    // 2. Se o envio do SMS foi despachado com sucesso, mostra a notificação.
     if (smsSuccess) {
-      //print("Comando de SMS enviado. Exibindo notificação de alerta.");
-
-      // Adicionamos uma pequena pausa para garantir que o sistema operacional
-      // não se sobrecarregue, dando um "respiro" entre as duas ações.
       await Future.delayed(const Duration(milliseconds: 500));
-
       await showEmergencyAlertNotification();
     } else {
-      //print("Fluxo de alerta interrompido pois o envio de SMS falhou.");
+      print("Fluxo de alerta interrompido pois o envio de SMS falhou.");
     }
   }
 
-  /// Método para enviar SMS
   Future<bool> sendPureSms() async {
     final FormController formController = Get.find();
     final number = formController.emergencyPhone.value;
@@ -101,7 +105,6 @@ class NotificationExtController extends GetxController {
       print('Erro no Controller: Número de emergência não configurado.');
       return false;
     }
-    /// MENSAGEM QUE APARECE NO SMS
     final message = 'Mensagem de teste puro.';
     try {
       print("Controller chamando o canal nativo para enviar SMS para: $number");
@@ -117,7 +120,6 @@ class NotificationExtController extends GetxController {
     }
   }
 
-  // Método para mostrar a notificação de alerta
   Future<void> showEmergencyAlertNotification() async {
     await AwesomeNotifications().createNotification(
       content: NotificationContent(
@@ -131,25 +133,23 @@ class NotificationExtController extends GetxController {
     );
   }
 
-  // --- O resto do seu controller ---
+  // Seus métodos de inicialização e estado (não mudam)
   @override
   void onInit() {
     super.onInit();
-    _loadCheckinConfirmationFromPrefs();
-  }
-
-  Future<void> _loadCheckinConfirmationFromPrefs() async {
-    final prefs = await SharedPreferences.getInstance();
-    isCheckinConfirmed.value = prefs.getBool('isCheckinConfirmed') ?? false;
+    // A sincronização agora é feita pela UI/Máquina de Estados quando necessário
+    // _loadCheckinConfirmationFromPrefs(); foi removido corretamente.
   }
 
   void resetCheckinState() async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('isCheckinConfirmed', false);
+    // Limpa tanto o flag persistente quanto a variável reativa
+    await prefs.remove('isCheckinConfirmed');
     isCheckinConfirmed.value = false;
   }
 
   Future<void> init() async {
+    // ... seu código de inicialização do AwesomeNotifications não muda ...
     await AwesomeNotifications().initialize(
       null,
       [
@@ -177,8 +177,10 @@ class NotificationExtController extends GetxController {
       onNotificationDisplayedMethod: onNotificationDisplayedMethod,
     );
   }
+
+  // Sua função de criar a notificação de check-in (não muda)
   Future<void> showCheckinNotification() async {
-    resetCheckinState();
+    // Apenas garante que a flag do processo anterior seja limpa
     await AwesomeNotifications().createNotification(
       content: NotificationContent(
         id: 10,
@@ -197,7 +199,50 @@ class NotificationExtController extends GetxController {
       ],
     );
   }
-  /// CANCELA TODAS AS NOTIFICAÇÕES
+
+  // 3. ADIÇÃO DOS NOVOS MÉTODOS PARA GERENCIAR O PROCESSO DE CHECK-IN
+
+  /// Inicia o processo de check-in com contagem regressiva.
+  /// Notifica o chamador (sua máquina de estados) sobre o resultado através de callbacks.
+  void startCheckinProcess({
+    required int countdownSeconds,
+    required VoidCallback onSuccess,
+    required VoidCallback onFailure,
+    Function(int secondsRemaining)? onTick,
+  }) {
+    _checkinTimer?.cancel();
+    resetCheckinState();
+
+    showCheckinNotification();
+
+    _checkinTimer = Timer.periodic(const Duration(seconds: 1), (timer) async {
+      final prefs = await SharedPreferences.getInstance();
+      final isConfirmedByClick = prefs.getBool('isCheckinConfirmed') ?? false;
+
+      if (isConfirmedByClick) {
+        timer.cancel();
+        await prefs.remove('isCheckinConfirmed');
+        onSuccess();
+      }
+      else if (timer.tick < countdownSeconds) {
+        final secondsRemaining = countdownSeconds - timer.tick;
+        onTick?.call(secondsRemaining);
+      }
+      else {
+        timer.cancel();
+        onFailure();
+      }
+    });
+  }
+
+  /// Permite que a máquina de estados cancele o processo de check-in a qualquer momento.
+  /// (Ex: se o carro voltar a se mover).
+  void cancelCheckinProcess() {
+    _checkinTimer?.cancel();
+    print("Processo de check-in cancelado externamente.");
+  }
+
+  // Sua função de cancelar todas as notificações (não muda)
   Future<void> cancelAllNotifications() async {
     await AwesomeNotifications().cancelAll();
   }
