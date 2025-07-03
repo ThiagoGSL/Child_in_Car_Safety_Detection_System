@@ -12,6 +12,8 @@ bool oldDeviceConnected = false;
 
 volatile bool isSendingPhoto = false;
 volatile bool fotoSolicitadaManualmente = false;
+// MODIFICAÇÃO: Flag para controlar o modo de transmissão ao vivo
+volatile bool liveStreamActive = false;
 
 // UUIDs
 #define SERVICE_UUID              "19b10000-e8f2-537e-4f6c-d104768a1214"
@@ -48,7 +50,6 @@ void send_photo_BLE(camera_fb_t* fb) {
 }
 
 
-// ALTERADO com a lógica de "Flush"
 void captureAndSendPhoto() {
   if (isSendingPhoto) {
     Serial.println("Aviso: Já há um envio de foto em andamento. Nova solicitação ignorada.");
@@ -61,16 +62,14 @@ void captureAndSendPhoto() {
   
   isSendingPhoto = true;
 
-  // Bloco para limpar o buffer antes da captura real
   Serial.println("Limpando buffer da câmera para garantir foto recente...");
   camera_fb_t* fb_flush = esp_camera_fb_get();
   if (fb_flush) {
-    esp_camera_fb_return(fb_flush); // Descarta o frame antigo que estava no buffer
+    esp_camera_fb_return(fb_flush);
     fb_flush = NULL; 
   }
 
   Serial.println(">>> Capturando novo frame (este será enviado)...");
-  // Agora, esta chamada vai esperar por um quadro totalmente novo
   camera_fb_t* fb = esp_camera_fb_get();
   
   if (fb) {
@@ -88,9 +87,24 @@ void captureAndSendPhoto() {
 class CommandCallbacks: public BLECharacteristicCallbacks {
     void onWrite(BLECharacteristic *pCharacteristic) override {
         String value = pCharacteristic->getValue();
-        if (value.length() > 0 && value[0] == 1) {
-            fotoSolicitadaManualmente = true;
-            Serial.println("Flag de solicitação de foto MANUAL levantada!");
+        if (value.length() > 0) {
+            switch(value[0]) {
+                case 1: // Solicitação de foto única
+                    fotoSolicitadaManualmente = true;
+                    Serial.println("Comando [1] recebido: Solicitação de foto MANUAL.");
+                    break;
+                case 2: // Iniciar Live Stream
+                    liveStreamActive = true;
+                    Serial.println("Comando [2] recebido: INICIAR Live Stream.");
+                    break;
+                case 3: // Parar Live Stream
+                    liveStreamActive = false;
+                    Serial.println("Comando [3] recebido: PARAR Live Stream.");
+                    break;
+                default:
+                    Serial.printf("Comando desconhecido recebido: %d\n", value[0]);
+                    break;
+            }
         }
     }
 };
@@ -102,6 +116,8 @@ class MyServerCallbacks : public BLEServerCallbacks {
   }
   void onDisconnect(BLEServer* pServerInstance) override {
     deviceConnected = false;
+    // MODIFICAÇÃO: Garante que o live stream pare na desconexão
+    liveStreamActive = false; 
     Serial.println("Dispositivo desconectado");
   }
 };
@@ -142,7 +158,7 @@ void setupCamera() {
 
 void setup() {
   Serial.begin(115200);
-  Serial.println("Inicializando ESP32-CAM (Modo Flush)...");
+  Serial.println("Inicializando ESP32-CAM (Modo Live Stream)...");
   setupCamera();
   BLEDevice::init("SafeBaby-CAM");
   pServer = BLEDevice::createServer();
@@ -168,28 +184,22 @@ void setup() {
 
 
 void loop() {
-  static unsigned long lastSendTime = 0;
-  const unsigned long sendInterval = 60000; 
-
   if (deviceConnected) {
     if (fotoSolicitadaManualmente) {
       fotoSolicitadaManualmente = false;
-      Serial.println("---------------------------------");
-      Serial.println("Processando solicitação de foto MANUAL...");
-      Serial.println("---------------------------------");
+      Serial.println("--- Processando solicitação de foto MANUAL ---");
       captureAndSendPhoto();
-      lastSendTime = millis(); 
     }
-
-    unsigned long currentTime = millis();
-    if (currentTime - lastSendTime >= sendInterval) {
-      Serial.println("---------------------------------");
-      Serial.println("Timer periódico ativado (1 min).");
-      Serial.println("---------------------------------");
-      captureAndSendPhoto(); 
-      lastSendTime = currentTime; 
+    
+    // MODIFICAÇÃO: Lógica de Live Stream
+    if (liveStreamActive) {
+      Serial.println("--- Enviando frame (Live Stream) ---");
+      captureAndSendPhoto();
+      delay(100); // Pequeno delay para não sobrecarregar o BLE
     }
   }
+
+  // MODIFICAÇÃO: Removido o timer de envio automático de 1 minuto
 
   if (!deviceConnected && oldDeviceConnected) {
     delay(500);
