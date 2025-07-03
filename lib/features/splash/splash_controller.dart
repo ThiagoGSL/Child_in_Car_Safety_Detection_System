@@ -10,6 +10,7 @@ import 'package:app_v0/features/notification/notification_controller.dart';
 import 'package:app_v0/features/photos/photo_controller.dart';
 import 'package:app_v0/features/main_page/main_page_controller.dart';
 import 'package:app_v0/features/main_page/main_page.dart';
+import 'package:app_v0/features/car_moviment_verification/sensores_service_controller';
 
 class SplashPageController extends GetxController {
   
@@ -41,6 +42,7 @@ class SplashPageController extends GetxController {
     Get.put(NotificationController(), permanent: true);
     Get.put(MainPageController(), permanent: true);
     Get.put(BluetoothController(), permanent: true);
+    Get.put(VehicleDetectionController(), permanent: true);
     print("--- Fase 1: Concluída.");
 
     // --- FASE 2: INICIALIZAÇÃO ASSÍNCRONA ---
@@ -54,6 +56,7 @@ class SplashPageController extends GetxController {
         Get.find<FormController>().init(),
         Get.find<NotificationController>().init(),
         Get.find<BluetoothController>().init(),
+        Get.find<VehicleDetectionController>().init(),
         // Nota: MainPageController não tem um método init(), então não é chamado aqui.
       ]);
     } catch (e) {
