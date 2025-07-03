@@ -1,6 +1,5 @@
 import 'dart:io';
 import 'dart:typed_data';
-import 'package:app_v0/features/Child_detection/baby_detection_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
@@ -16,7 +15,6 @@ class PhotoController extends GetxController {
   var isProcessing = false.obs;
 
   // Injetando o controller de detecção
-  final BabyDetectionController _babyDetectionController = Get.find();
 
   final String _lastPhotoFileName = 'last_received_photo.jpg';
 
@@ -28,10 +26,6 @@ class PhotoController extends GetxController {
   Future<void> init() async {
     print("PhotoController: Iniciando carregamento da última foto...");
     await loadLastPhoto();
-    // Se uma foto já existir, analisa ela na inicialização
-    if (lastPhoto.value != null) {
-      await analyzeLastPhoto();
-    }
     print("PhotoController: Inicialização concluída.");
   }
 
@@ -70,45 +64,10 @@ class PhotoController extends GetxController {
       
       print('📸 Foto salva/sobrescrita em: $path');
 
-      // Após salvar, chama a análise da imagem
-      await analyzeLastPhoto();
 
     } catch (e) {
       print('❌ Erro ao salvar a imagem: $e');
       detectionResult.value = {"error": "Falha ao salvar a imagem"};
-    } finally {
-      isProcessing.value = false;
-    }
-  }
-
-  /// Analisa a foto armazenada em `lastPhoto`.
-  Future<void> analyzeLastPhoto() async {
-    if (lastPhoto.value == null) {
-      print("⚠️ Nenhuma foto para analisar.");
-      return;
-    }
-
-    // Garante que o modelo esteja pronto antes de tentar a detecção
-    if (!_babyDetectionController.modelReady) {
-      print("⏳ Modelo não está pronto, aguardando...");
-      // Espera um pouco para o caso de o modelo ainda estar carregando
-      await Future.delayed(const Duration(seconds: 2)); 
-      if (!_babyDetectionController.modelReady) {
-        print("❌ Modelo ainda não está pronto após espera.");
-        detectionResult.value = {"error": "Modelo de IA não carregado"};
-        return;
-      }
-    }
-
-    print("🤖 Iniciando análise da imagem...");
-    isProcessing.value = true;
-    try {
-      final result = await _babyDetectionController.detectInImage(XFile(lastPhoto.value!.path));
-      detectionResult.value = result;
-      print("✅ Análise concluída: ${result['label']} com confiança de ${result['confidence']}");
-    } catch (e) {
-      print("❌ Erro durante a análise da imagem: $e");
-      detectionResult.value = {"error": "Falha na análise"};
     } finally {
       isProcessing.value = false;
     }

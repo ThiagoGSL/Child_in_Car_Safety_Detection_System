@@ -48,19 +48,12 @@ class BluetoothController extends GetxController {
     super.onInit();
   }
 
-  // --- MUDANÇA 2: NOVO MÉTODO DE INICIALIZAÇÃO ASSÍNCRONO ---
-  /// Este método será chamado pelo SplashController. Ele configura todos os
-  /// listeners necessários para o funcionamento do Bluetooth.
   Future<void> init() async {
     print("BluetoothController: Iniciando configuração dos listeners...");
 
-    // Injeta as dependências necessárias.
     _photoController = Get.find<PhotoController>();
     _notificationController = Get.find<NotificationController>();
 
-    // Configura o listener para o status do Bluetooth. A varredura (scan)
-    // só começará quando o hardware estiver pronto e depois que a splash
-    // screen já tiver sido exibida, evitando pop-ups de permissão indesejados.
     flutterReactiveBle.statusStream.listen((status) {
       print('BLE status: $status');
       if (status == BleStatus.ready) {
@@ -68,25 +61,24 @@ class BluetoothController extends GetxController {
       }
     });
 
-    // Configura o listener para reagir a novas imagens recebidas.
-    ever(receivedImage, (Uint8List? imageData) {
-      if (imageData != null && imageData.isNotEmpty) {
-        Get.snackbar(
-          "Foto Recebida!",
-           "Uma nova imagem foi salva com sucesso.",
-           snackPosition: SnackPosition.TOP,
-           backgroundColor: const Color(0xFF16213E),
-           colorText: Colors.white,
-           margin: const EdgeInsets.all(12),
-           borderRadius: 12,
-           icon: const Icon(Icons.check_circle_outline, color: Color(0xFF53BF9D)),
-           duration: const Duration(seconds: 3),);
-      }
-    });
+///    ever(receivedImage, (Uint8List? imageData) {
+///      if (imageData != null && imageData.isNotEmpty) {
+///        Get.snackbar(
+///          "Foto Recebida!",
+///           "Uma nova imagem foi salva com sucesso.",
+///           snackPosition: SnackPosition.TOP,
+///           backgroundColor: const Color(0xFF16213E),
+///           colorText: Colors.white,
+///           margin: const EdgeInsets.all(12),
+///           borderRadius: 12,
+///           icon: const Icon(Icons.check_circle_outline, color: Color(0xFF53BF9D)),
+///           duration: const Duration(seconds: 3),);
+///      }
+//    }
+///    )
+///    ;
 
     print("BluetoothController: Configuração concluída. Aguardando status do BLE.");
-    // Este método termina sua execução rapidamente. O trabalho pesado (scan, conexão)
-    // é reativo e acontecerá em segundo plano.
   }
 
   Future<bool> _checkPermissions() async {
@@ -146,7 +138,7 @@ class BluetoothController extends GetxController {
       isScanning.value = false;
     });
 
-    Future.delayed(const Duration(seconds: 10), stopScan);
+    // MODIFICAÇÃO: Removido o Future.delayed que parava a busca.
   }
 
   void stopScan() {
@@ -166,7 +158,6 @@ class BluetoothController extends GetxController {
     _connSub?.cancel();
     _connSub = flutterReactiveBle.connectToDevice(
       id: device.id,
-      // ALTERADO: Adiciona a característica de comando para ser descoberta
       servicesWithCharacteristicsToDiscover: {
         serviceUuid: [photoCharUuid, childCharUuid, commandCharUuid]
       },
@@ -212,76 +203,13 @@ class BluetoothController extends GetxController {
       } else if (state.connectionState == DeviceConnectionState.disconnected) {
         print('❌ Desconectado de ${device.name}');
         disconnect();
-        Future.delayed(const Duration(seconds: 5), startAutoScan);
       }
     }, onError: (e) {
       print('Erro na conexão: $e');
       disconnect();
-      Future.delayed(const Duration(seconds: 5), startAutoScan);
     });
   }
 
-  // ####################################################################
-  // #                        NOVA FUNÇÃO                               #
-  // ####################################################################
-
-  Future<void> requestPhoto() async {
-    if (!isConnected.value || connectedDevice.value == null) {
-      print('Erro: Não é possível solicitar foto, dispositivo não conectado.');
-      Get.snackbar(
-        'Não conectado',
-        'Conecte-se a um dispositivo antes de solicitar uma foto.',
-        snackPosition: SnackPosition.TOP,
-        backgroundColor: Colors.red.shade800,
-        colorText: Colors.white,
-      );
-      return;
-    }
-    // NOVO: Adiciona verificação para não solicitar outra enquanto uma já está em andamento
-    if (isRequestingPhoto.value) {
-      print('⚠️ Solicitação de foto já em andamento.');
-      return;
-    }
-    
-    final characteristic = QualifiedCharacteristic(
-      serviceId: serviceUuid,
-      characteristicId: commandCharUuid,
-      deviceId: connectedDevice.value!.id,
-    );
-
-    try {
-      // Envia o comando '1' para a característica
-      final command = Uint8List.fromList([1]);
-      print('➡️  Enviando comando para solicitar foto...');
-      await flutterReactiveBle.writeCharacteristicWithResponse(
-        characteristic,
-        value: command,
-      );
-      print('✅ Comando de foto enviado com sucesso.');
-      Get.snackbar(
-        'Solicitação Enviada',
-        'Aguardando imagem da câmera...',
-        snackPosition: SnackPosition.TOP,
-        backgroundColor: const Color(0xFF16213E),
-        colorText: Colors.white,
-        margin: const EdgeInsets.all(12),
-        borderRadius: 12,
-        icon: const Icon(Icons.camera, color: Colors.white),
-        duration: const Duration(seconds: 2),
-      );
-    } catch (e) {
-      print('❌ Erro ao enviar comando de foto: $e');
-      Get.snackbar(
-        'Erro',
-        'Falha ao solicitar a foto. Tente novamente.',
-        snackPosition: SnackPosition.TOP,
-        backgroundColor: Colors.red.shade800,
-        colorText: Colors.white,
-      );
-    }
-  }
-
-  // ####################################################################
 
   void disconnect() {
     _connSub?.cancel();
@@ -327,9 +255,66 @@ class BluetoothController extends GetxController {
     _decodingInProgress = false;
 
     print('🔌 Conexão encerrada.');
-    Future.delayed(const Duration(seconds: 5), startAutoScan);
+
+/// -----------------------------------------------------------------------------------------------
   }
-  
+  Future<void> startLiveStream() async {
+    if (!isConnected.value || connectedDevice.value == null) return;
+    print("➡️  Enviando comando para INICIAR Live Stream...");
+    await _writeCommand([2]);
+  }
+
+  /// NOVO: Para o modo de transmissão ao vivo
+  Future<void> stopLiveStream() async {
+    if (!isConnected.value || connectedDevice.value == null) return;
+    print("➡️  Enviando comando para PARAR Live Stream...");
+    await _writeCommand([3]);
+  }
+
+  /// NOVO: Método auxiliar para escrever comandos
+  Future<void> _writeCommand(List<int> command) async {
+    if (!isConnected.value || connectedDevice.value == null) {
+      print('Erro: Dispositivo não conectado para enviar comando.');
+      return;
+    }
+    
+    final characteristic = QualifiedCharacteristic(
+      serviceId: serviceUuid,
+      characteristicId: commandCharUuid,
+      deviceId: connectedDevice.value!.id,
+    );
+
+    try {
+      await flutterReactiveBle.writeCharacteristicWithResponse(
+        characteristic,
+        value: command,
+      );
+      print('✅ Comando $command enviado com sucesso.');
+    } catch (e) {
+      print('❌ Erro ao enviar comando $command: $e');
+    }
+  }
+
+  Future<void> requestPhoto() async {
+    if (isRequestingPhoto.value) {
+      print('⚠️ Solicitação de foto já em andamento.');
+      return;
+    }
+    await _writeCommand([1]); // Usa o novo método auxiliar
+    Get.snackbar(
+        'Solicitação Enviada',
+        'Aguardando imagem da câmera...',
+        snackPosition: SnackPosition.TOP,
+        backgroundColor: const Color(0xFF16213E),
+        colorText: Colors.white,
+        margin: const EdgeInsets.all(12),
+        borderRadius: 12,
+        icon: const Icon(Icons.camera, color: Colors.white),
+        duration: const Duration(seconds: 2),
+      );
+  }
+///-------------------------------------------------------------------------------------------------
+
   void _subscribeToCharacteristics(String deviceId) {
     _photoSub?.cancel();
     _childSub?.cancel();
@@ -340,7 +325,6 @@ class BluetoothController extends GetxController {
     _decodingInProgress = false;
     _receptionStartTime = null;
 
-    // A lógica de recebimento da foto permanece EXATAMENTE A MESMA.
     _photoSub = flutterReactiveBle
         .subscribeToCharacteristic(QualifiedCharacteristic(
       deviceId: deviceId,
@@ -348,7 +332,6 @@ class BluetoothController extends GetxController {
       characteristicId: photoCharUuid,
     ))
         .listen((chunk) async {
-      // ... (todo o seu código de reconstrução de imagem aqui, sem alteração) ...
       print('📦 Chunk recebido: ${chunk.length} bytes');
       int i = 0;
       if (!_receivingImage &&

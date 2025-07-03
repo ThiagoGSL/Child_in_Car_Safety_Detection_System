@@ -90,7 +90,7 @@ class HomePage extends StatelessWidget {
                 'Acompanhe em tempo real os eventos do dispositivo.',
                 style: TextStyle(color: Colors.white70, fontSize: 16),
               ),
-              const SizedBox(height: 30),
+              const SizedBox(height: 10),
               Obx(() {
                 bool isConnected = bleController.isConnected.value;
                 bool isChildDetected = bleController.childDetected.value;
@@ -107,15 +107,22 @@ class HomePage extends StatelessWidget {
                       isLast: false,
                       isPast: isConnected,
                       isActive: isConnectingStepActive,
-                      eventCard: PulsingCard(
-                        isPulsing: isConnectingStepActive,
-                        child: Container(
-                          constraints: const BoxConstraints(minHeight: 48),
-                          alignment: Alignment.center,
-                          child: Text(
-                            isConnected ? 'CONECTADO' : 'PROCURANDO DISPOSITIVO...',
-                            textAlign: TextAlign.center,
-                            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13.5),
+                      eventCard: GestureDetector(
+                        onTap: () {
+                          // MODIFICAÇÃO: Removida a condição. Sempre navega para a ble_page.
+                          mainPageController.onItemTapped(2); // Muda para a aba de Configurações
+                          mainPageController.navigateToBlePage(true); // Mostra a BlePage
+                        },
+                        child: PulsingCard(
+                          isPulsing: isConnectingStepActive,
+                          child: Container(
+                            constraints: const BoxConstraints(minHeight: 48),
+                            alignment: Alignment.center,
+                            child: Text(
+                              isConnected ? 'CONECTADO' : 'PROCURANDO DISPOSITIVO...',
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13.5),
+                            ),
                           ),
                         ),
                       ),
@@ -125,15 +132,22 @@ class HomePage extends StatelessWidget {
                       isLast: true,
                       isPast: isPhotoReceived,
                       isActive: isNotifyingStepActive,
-                      eventCard: PulsingCard(
-                        isPulsing: isNotifyingStepActive,
-                        child: Container(
-                          constraints: const BoxConstraints(minHeight: 48),
-                          alignment: Alignment.center,
-                          child: Text(
-                            isPhotoReceived ? 'FOTO RECEBIDA' : 'AGUARDANDO FOTO',
-                            textAlign: TextAlign.center,
-                            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13.5),
+                      // MODIFICAÇÃO: Adicionado GestureDetector para navegar para a galeria
+                      eventCard: GestureDetector(
+                        onTap: () {
+                          mainPageController.onItemTapped(2); // Muda para a aba de Configurações
+                          mainPageController.navigateToPhotoPage(true); // Mostra a PhotoPage
+                        },
+                        child: PulsingCard(
+                          isPulsing: isNotifyingStepActive,
+                          child: Container(
+                            constraints: const BoxConstraints(minHeight: 48),
+                            alignment: Alignment.center,
+                            child: Text(
+                              isPhotoReceived ? 'FOTO RECEBIDA' : 'AGUARDANDO FOTO',
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13.5),
+                            ),
                           ),
                         ),
                       ),
