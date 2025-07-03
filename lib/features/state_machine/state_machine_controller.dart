@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:app_v0/features/bluetooth/ble_controller.dart';
+import 'package:app_v0/features/car_moviment_verification/sensores_service_controller.dart';
 import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 import 'external_controllers.dart';
@@ -38,8 +39,8 @@ class StateMachineController extends GetxController {
 
   // Dependências de outros controllers, injetadas via GetX.
   late final BluetoothController _bluetoothController;
-  late final CarroController _carroController;
   late final DeteccaoController _deteccaoController;
+  late final VehicleDetectionController _vehicleDetectionController;
 
   @override
   void onInit() {
@@ -53,13 +54,13 @@ class StateMachineController extends GetxController {
 
     // Obtém as instâncias dos controllers de dependência.
     _bluetoothController = Get.find<BluetoothController>();
-    _carroController = Get.find<CarroController>();
     _deteccaoController = Get.find<DeteccaoController>();
+    _vehicleDetectionController = Get.find<VehicleDetectionController>();
 
     // Registra listeners para as variáveis de estado externas.
     // Qualquer alteração nelas dispara uma reavaliação da máquina de estados.
     ever(_bluetoothController.isConnected, (_) => _avaliarEstado());
-    ever(_carroController.andando, (_) => _avaliarEstado());
+    ever(_vehicleDetectionController.vehicleState, (_) => _avaliarEstado());
     ever(_deteccaoController.faceDetectada, (_) => _avaliarEstado());
     ever(_deteccaoController.temBebe, (_) => _avaliarEstado());
     ever(_deteccaoController.tempoSeguroExpirado, (_) => _avaliarEstado());
@@ -101,11 +102,10 @@ class StateMachineController extends GetxController {
           break;
 
         case EstadoApp.conectado:
-          print(_carroController.andando.value);
           if (!_bluetoothController.isConnected.value) {
             estadoAtual.value = EstadoApp.idle;
-          } 
-          else if (_carroController.andando.value) {
+          }
+          else if (_vehicleDetectionController.vehicleState.value == VehicleState.moving) {
             estadoAtual.value = EstadoApp.carroandando;
           } else if (_deteccaoController.faceDetectada.value) {
             estadoAtual.value = EstadoApp.monitorando;
@@ -113,7 +113,7 @@ class StateMachineController extends GetxController {
           break;
 
         case EstadoApp.carroandando:
-          if (!_carroController.andando.value) {
+          if (_vehicleDetectionController.vehicleState.value != VehicleState.moving) {
             estadoAtual.value = EstadoApp.conectado;
           }
           break;
@@ -121,7 +121,7 @@ class StateMachineController extends GetxController {
         case EstadoApp.monitorando:
           if (!_bluetoothController.isConnected.value) {
             estadoAtual.value = EstadoApp.perdadeconexao;
-          } else if (_carroController.andando.value) {
+          } else if (_vehicleDetectionController.vehicleState.value == VehicleState.moving) {
             estadoAtual.value = EstadoApp.carroandando;
           } else if (!_deteccaoController.faceDetectada.value) {
             estadoAtual.value = EstadoApp.conectado;
@@ -138,7 +138,7 @@ class StateMachineController extends GetxController {
             estadoAtual.value = EstadoApp.esperando;
           } else if (!_deteccaoController.faceDetectada.value) {
             estadoAtual.value = EstadoApp.conectado;
-          } else if (_carroController.andando.value) {
+          } else if (_vehicleDetectionController.vehicleState.value == VehicleState.moving) {
             estadoAtual.value = EstadoApp.carroandando;
           } else if (_deteccaoController.semResposta.value) {
             estadoAtual.value = EstadoApp.alerta;
@@ -172,7 +172,7 @@ class StateMachineController extends GetxController {
             estadoAtual.value = EstadoApp.idle;
           }
           break;
-            
+
         case EstadoApp.alerta:
         // A saída do alerta é intencionalmente gerida apenas por uma ação explícita do usuário.
           if (!_deteccaoController.semResposta.value) {
@@ -333,7 +333,7 @@ class StateMachineController extends GetxController {
 
       case EstadoApp.relembrando:
         return "Relembrando";
-      
+
       case EstadoApp.esperando:
         return "Esperando";
     }
