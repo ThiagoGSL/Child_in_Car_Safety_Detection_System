@@ -7,7 +7,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:tflite_flutter/tflite_flutter.dart';
 
 class BabyDetectionController extends GetxController {
-  static const String _modelPath = "lib/assets/ml/model_child_detection_v3.tflite";
+  static const String _modelPath = "assets/ml/model_child_detection_v5.tflite";
   static const int _inputSize = 224;
   static const int _maxRecentInferences = 5;
 
@@ -49,8 +49,7 @@ class BabyDetectionController extends GetxController {
 
     try {
       _interpreter = await Interpreter.fromAsset(
-        _modelPath,
-        options: InterpreterOptions()..threads = 2,
+        _modelPath
       );
 
       isModelLoaded.value = true;
@@ -142,13 +141,18 @@ class BabyDetectionController extends GetxController {
 
     var input = List.generate(
       1, (i) => List.generate(
-        _inputSize, (y) => List.generate(
-          _inputSize, (x) {
-            final pixel = resizedImage.getPixel(x, y);
-            return [pixel.r.toDouble() / 255.0, pixel.g.toDouble() / 255.0, pixel.b.toDouble() / 255.0];
-          }
-        ),
-      ),
+      _inputSize, (y) => List.generate(
+        _inputSize, (x) {
+      final pixel = resizedImage.getPixel(x, y);
+
+      // Usamos a fórmula de luminância padrão para converter o pixel.
+      final luminance = (0.299 * pixel.r + 0.587 * pixel.g + 0.114 * pixel.b);
+
+      // Normalizar e retornar um array com APENAS UM canal.
+      return [luminance / 255.0];
+    }
+    ),
+    ),
     );
 
     return input;

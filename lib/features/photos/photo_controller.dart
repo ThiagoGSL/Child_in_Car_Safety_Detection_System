@@ -14,6 +14,8 @@ class PhotoController extends GetxController {
   var detectionResult = Rx<Map<String, dynamic>?>(null);
   // Observável para controlar o estado de processamento da imagem
   var isProcessing = false.obs;
+  // Variável para a máquina de estados
+  var criancaDetectada = false.obs;
 
   // Injetando o controller de detecção
   final BabyDetectionController _babyDetectionController = Get.find();
@@ -105,6 +107,7 @@ class PhotoController extends GetxController {
     try {
       final result = await _babyDetectionController.detectInImage(XFile(lastPhoto.value!.path));
       detectionResult.value = result;
+      criancaDetectada.value = result['label'] == "Criança" ? true : false;
       print("✅ Análise concluída: ${result['label']} com confiança de ${result['confidence']}");
     } catch (e) {
       print("❌ Erro durante a análise da imagem: $e");
