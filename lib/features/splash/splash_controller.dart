@@ -1,5 +1,6 @@
 import 'dart:async'; // Importe para usar o Future.wait
 
+import 'package:app_v0/features/Child_detection/baby_detection_controller.dart';
 import 'package:app_v0/features/main_page/main_page.dart';
 import 'package:app_v0/features/onboarding/onboarding_page.dart';
 import 'package:app_v0/features/car_moviment_verification/sensores_service_controller.dart';
@@ -47,27 +48,29 @@ class SplashPageController extends GetxController {
   Future<void> _loadDependencies() async {
     // --- FASE 1: INJEÇÃO DE DEPENDÊNCIAS ---
     print("--- Fase 1: Injetando dependências...");
+    Get.put(DeteccaoController(), permanent: true);
+    Get.put(VehicleDetectionController(), permanent: true);
+    Get.put(BabyDetectionController(), permanent: true);
     Get.put(PhotoController(), permanent: true);
     Get.put(FormController(), permanent: true);
     Get.put(NotificationController(), permanent: true);
     Get.put(MainPageController(), permanent: true);
     Get.put(BluetoothController(), permanent: true);
     Get.put(CarroController(), permanent: true);
-    Get.put(DeteccaoController(), permanent: true);
     Get.put(StateMachineController(), permanent: true);
-    Get.put(VehicleDetectionController(), permanent: true);
     print("--- Fase 1: Concluída.");
 
     // --- FASE 2: INICIALIZAÇÃO ASSÍNCRONA ---
     print("--- Fase 2: Executando inicializações assíncronas em paralelo...");
     try {
       await Future.wait([
+        Get.find<VehicleDetectionController>().init(),
+        Get.find<BabyDetectionController>().init(),
         Get.find<PhotoController>().init(),
         Get.find<FormController>().init(),
         Get.find<NotificationController>().init(),
         Get.find<BluetoothController>().init(),
         Get.find<StateMachineController>().init(),
-        Get.find<VehicleDetectionController>().init(),
         // Nota: MainPageController não tem um método init(), então não é chamado aqui.
 
       ]);

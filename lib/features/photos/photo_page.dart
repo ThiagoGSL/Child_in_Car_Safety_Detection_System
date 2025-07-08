@@ -144,10 +144,134 @@ class PhotoPage extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 24),
+            _buildDetectionResultCard(),
+            const SizedBox(height: 24),
             _buildActionButtons(),
-            const SizedBox(height: 72),
+            const SizedBox(height: 16),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildDetectionResultCard() {
+    return Obx(() {
+      final isProcessing = photoController.isProcessing.value;
+      final result = photoController.detectionResult.value;
+
+      return AnimatedSwitcher(
+        duration: const Duration(milliseconds: 300),
+        transitionBuilder: (child, animation) {
+          return FadeTransition(
+            opacity: animation,
+            child: ScaleTransition(scale: animation, child: child),
+          );
+        },
+        child: _buildResultContent(isProcessing, result),
+      );
+    });
+  }
+
+  Widget _buildResultContent(bool isProcessing, Map<String, dynamic>? result) {
+    if (isProcessing) {
+      return Container(
+        key: const ValueKey('processing'),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: dialogColor.withOpacity(0.5),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: const Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white70),
+            ),
+            SizedBox(width: 12),
+            Text("Analisando imagem...", style: TextStyle(color: Colors.white70, fontSize: 16)),
+          ],
+        ),
+      );
+    }
+
+    if (result == null) {
+      return const SizedBox(key: ValueKey('empty'));
+    }
+
+    // --- MUDANÇA: AGORA EXIBE A MENSAGEM DE ERRO REAL ---
+    if (result.containsKey('error')) {
+      final errorMsg = result['error']?.toString() ?? "Ocorreu um erro desconhecido.";
+      return _buildInfoCard(
+        key: const ValueKey('error'),
+        icon: Icons.warning_amber_rounded,
+        color: Colors.redAccent,
+        title: "Falha na Análise",
+        subtitle: errorMsg, // Exibe a mensagem de erro específica
+      );
+    }
+
+    final label = result['label'] as String;
+    final confidence = (result['confidence'] as double) * 100;
+    final isChild = label == "Criança";
+
+    if (isChild) {
+      return _buildInfoCard(
+        key: const ValueKey('child_detected'),
+        icon: Icons.check_circle_outline,
+        color: accentColor,
+        title: "Criança Detectada",
+        subtitle: "Confiança: ${confidence.toStringAsFixed(1)}%",
+      );
+    } else {
+      return _buildInfoCard(
+        key: const ValueKey('no_child_detected'),
+        icon: Icons.help_outline,
+        color: Colors.orangeAccent,
+        title: "Nenhuma Criança Detectada",
+        subtitle: "Confiança: ${confidence.toStringAsFixed(1)}%",
+      );
+    }
+  }
+
+  Widget _buildInfoCard({
+    required Key key,
+    required IconData icon,
+    required Color color,
+    required String title,
+    required String subtitle,
+  }) {
+    return Container(
+      key: key,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: dialogColor,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withOpacity(0.7), width: 1.5),
+        boxShadow: [
+          BoxShadow(
+            color: color.withOpacity(0.15),
+            blurRadius: 10,
+            spreadRadius: 2,
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: color, size: 32),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title, style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 2),
+                Text(subtitle, style: const TextStyle(color: Colors.white70, fontSize: 14)),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

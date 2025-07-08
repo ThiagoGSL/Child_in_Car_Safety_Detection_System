@@ -40,9 +40,9 @@ class StateMachineController extends GetxController {
 
   // Dependências de outros controllers, injetadas via GetX.
   final BluetoothController _bluetoothController = Get.find<BluetoothController>();
-  late final PhotoController _photoController;
-  late final DeteccaoController _deteccaoController;
-  late final VehicleDetectionController _vehicleDetectionController;
+  final PhotoController _photoController = Get.find<PhotoController>();
+  final DeteccaoController _deteccaoController = Get.find<DeteccaoController>();
+  final VehicleDetectionController _vehicleDetectionController = Get.find<VehicleDetectionController>();
 
   @override
   void onInit() {
@@ -54,16 +54,11 @@ class StateMachineController extends GetxController {
   Future<void> init() async {
     print("StateMachineController: Iniciando");
 
-    // Obtém as instâncias dos controllers de dependência.
-    _deteccaoController = Get.find<DeteccaoController>();
-    _photoController = Get.find<PhotoController>();
-    _vehicleDetectionController = Get.find<VehicleDetectionController>();
-
     // Registra listeners para as variáveis de estado externas.
     // Qualquer alteração nelas dispara uma reavaliação da máquina de estados.
     ever(_bluetoothController.isConnected, (_) => _avaliarEstado());
     ever(_vehicleDetectionController.vehicleState, (_) => _avaliarEstado());
-    ever(_photoController.detectionResult, (_) => _avaliarEstado());
+    ever(_photoController.criancaDetectada, (_) => _avaliarEstado());
     ever(_deteccaoController.temBebe, (_) => _avaliarEstado());
     ever(_deteccaoController.tempoSeguroExpirado, (_) => _avaliarEstado());
     ever(_deteccaoController.semResposta, (_) => _avaliarEstado());

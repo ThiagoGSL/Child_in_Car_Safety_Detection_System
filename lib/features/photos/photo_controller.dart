@@ -3,21 +3,18 @@ import 'dart:typed_data';
 import 'package:app_v0/features/Child_detection/baby_detection_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:image_picker/image_picker.dart'; // Import necessário para XFile
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 
 class PhotoController extends GetxController {
-  // Observável para a última foto
+  // Observáveis
   var lastPhoto = Rx<File?>(null);
-  // Observável para o resultado da detecção
   var detectionResult = Rx<Map<String, dynamic>?>(null);
-  // Observável para controlar o estado de processamento da imagem
   var isProcessing = false.obs;
-  // Variável para a máquina de estados
   var criancaDetectada = false.obs;
 
   // Injetando o controller de detecção
-
   final BabyDetectionController _babyDetectionController = Get.find();
 
   final String _lastPhotoFileName = 'last_received_photo.jpg';
@@ -25,6 +22,11 @@ class PhotoController extends GetxController {
   @override
   void onInit() {
     super.onInit();
+    // --- MUDANÇA PRINCIPAL ---
+    // O worker 'ever' escuta a variável 'lastPhoto'.
+    // Sempre que ela for alterada (seja por salvar ou carregar), 
+    // a função _analyzePhoto será executada automaticamente.
+    ever(lastPhoto, _analyzePhoto);
   }
 
   Future<void> init() async {
@@ -34,13 +36,14 @@ class PhotoController extends GetxController {
   }
 
   /// Carrega a última foto salva, se ela existir.
+  /// A análise será disparada automaticamente pelo worker 'ever'.
   Future<void> loadLastPhoto() async {
     try {
       final dir = await getApplicationDocumentsDirectory();
       final file = File('${dir.path}/$_lastPhotoFileName');
 
       if (await file.exists()) {
-        lastPhoto.value = file;
+        lastPhoto.value = file; // Apenas atualiza o valor
         print('📸 Última foto carregada de: ${file.path}');
       } else {
         print('ℹ️ Nenhuma foto salva encontrada.');
@@ -50,9 +53,10 @@ class PhotoController extends GetxController {
     }
   }
 
-  /// Salva a imagem recebida e dispara a análise.
+  /// Salva a imagem recebida.
+  /// A análise será disparada automaticamente pelo worker 'ever'.
   Future<void> saveImage(Uint8List imageBytes) async {
-    isProcessing.value = true;
+    // Não é mais necessário controlar o isProcessing aqui
     try {
       final dir = await getApplicationDocumentsDirectory();
       final path = '${dir.path}/$_lastPhotoFileName';
@@ -60,46 +64,39 @@ class PhotoController extends GetxController {
       
       await file.writeAsBytes(imageBytes);
 
+      // Limpa o cache para garantir que a UI mostre a nova imagem
       imageCache.clear();
       imageCache.clearLiveImages();
       
-      lastPhoto.value = file;
-      lastPhoto.refresh();
+      // Apenas atualiza o valor, o 'ever' fará o resto
+      lastPhoto.value = file; 
       
       print('📸 Foto salva/sobrescrita em: $path');
-
 
     } catch (e) {
       print('❌ Erro ao salvar a imagem: $e');
       detectionResult.value = {"error": "Falha ao salvar a imagem"};
-    } finally {
-      isProcessing.value = false;
     }
   }
 
-  /// Analisa a foto armazenada em `lastPhoto`.
-  Future<void> analyzeLastPhoto() async {
-    if (lastPhoto.value == null) {
-      print("⚠️ Nenhuma foto para analisar.");
+  /// Analisa a foto. Este método agora é privado e chamado pelo worker.
+  Future<void> _analyzePhoto(File? photo) async {
+    if (photo == null) {
+      print("ℹ️ Foto nula, limpando resultado.");
+      detectionResult.value = null; // Limpa o resultado se a foto for removida
       return;
     }
 
-    // Garante que o modelo esteja pronto antes de tentar a detecção
     if (!_babyDetectionController.modelReady) {
-      print("⏳ Modelo não está pronto, aguardando...");
-      // Espera um pouco para o caso de o modelo ainda estar carregando
-      await Future.delayed(const Duration(seconds: 2)); 
-      if (!_babyDetectionController.modelReady) {
-        print("❌ Modelo ainda não está pronto após espera.");
-        detectionResult.value = {"error": "Modelo de IA não carregado"};
-        return;
-      }
+      print("❌ Modelo de IA não carregado. Não é possível analisar.");
+      detectionResult.value = {"error": "Modelo de IA não carregado"};
+      return;
     }
 
     print("🤖 Iniciando análise da imagem...");
     isProcessing.value = true;
     try {
-      final result = await _babyDetectionController.detectInImage(XFile(lastPhoto.value!.path));
+      final result = await _babyDetectionController.detectInImage(XFile(photo.path));
       detectionResult.value = result;
       criancaDetectada.value = result['label'] == "Criança" ? true : false;
       print("✅ Análise concluída: ${result['label']} com confiança de ${result['confidence']}");
@@ -117,65 +114,30 @@ class PhotoController extends GetxController {
     if (photo != null && await photo.exists()) {
       try {
         await photo.delete();
-        lastPhoto.value = null; 
-        detectionResult.value = null; // Limpa o resultado da detecção
-        Get.snackbar(
-          'Sucesso!',
-          'A foto foi excluída.',
-          snackPosition: SnackPosition.TOP,
-          backgroundColor: const Color(0xFF16213E),
-          colorText: Colors.white,
-          margin: EdgeInsets.zero,
-          borderRadius: 0,
-          icon: const Icon(Icons.check_circle_outline, color: Color(0xFF53BF9D)),
-          snackStyle: SnackStyle.GROUNDED,
-        );
+        lastPhoto.value = null; // Dispara o worker 'ever' que vai limpar o resultado
+        Get.snackbar('Sucesso!', 'A foto foi excluída.');
         print('🗑️ Última foto excluída.');
       } catch (e) {
         print('❌ Erro ao excluir a foto: $e');
-        Get.snackbar(
-          'Erro',
-          'Não foi possível excluir a foto.',
-          snackPosition: SnackPosition.TOP,
-          backgroundColor: const Color(0xFF16213E),
-          colorText: Colors.white,
-          margin: EdgeInsets.zero,
-          borderRadius: 0,
-          icon: Icon(Icons.error_outline, color: Colors.red.shade400),
-          snackStyle: SnackStyle.GROUNDED,
-        );
+        Get.snackbar('Erro', 'Não foi possível excluir a foto.');
       }
     }
   }
 
-  /// Método para compartilhar a última foto.
+  // O método shareLastPhoto continua igual
   Future<void> shareLastPhoto() async {
     final photo = lastPhoto.value;
     
     if (photo != null && await photo.exists()) {
       try {
         final xfile = XFile(photo.path);
-
-        await Share.shareXFiles(
-          [xfile],
-          text: 'Foto do meu bebê, monitorada pelo SafeBaby!',
-        );
+        await Share.shareXFiles([xfile], text: 'Foto monitorada pelo SafeBaby!');
         print('🚀 Foto compartilhada com sucesso.');
       } catch (e) {
         print('❌ Erro ao compartilhar a foto: $e');
       }
     } else {
-      Get.snackbar(
-        'Erro',
-        'Não foi possível encontrar a foto para compartilhar.',
-        snackPosition: SnackPosition.TOP,
-        backgroundColor: const Color(0xFF16213E),
-        colorText: Colors.white,
-        margin: EdgeInsets.zero,
-        borderRadius: 0,
-        icon: Icon(Icons.error_outline, color: Colors.red.shade400),
-        snackStyle: SnackStyle.GROUNDED,
-      );
+      Get.snackbar('Erro', 'Não foi possível encontrar a foto para compartilhar.');
       print('⚠️ Tentativa de compartilhar uma foto que não existe.');
     }
   }

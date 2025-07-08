@@ -30,6 +30,10 @@ class BabyDetectionController extends GetxController {
   // externamente através do método init().
 
   @override
+  void onInit() {
+    super.onInit();
+  }
+
   void onClose() {
     _interpreter.close();
     super.onClose();
