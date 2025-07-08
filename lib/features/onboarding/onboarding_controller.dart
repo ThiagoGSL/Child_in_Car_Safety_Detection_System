@@ -1,7 +1,6 @@
 import 'package:app_v0/features/bluetooth/ble_controller.dart';
 import 'package:app_v0/features/cadastro/form_controller.dart';
 import 'package:app_v0/features/main_page/main_page.dart';
-import 'package:app_v0/features/onboarding/onboarding_finishing_page.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';

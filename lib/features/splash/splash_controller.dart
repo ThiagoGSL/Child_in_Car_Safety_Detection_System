@@ -1,6 +1,8 @@
-import 'dart:async';
+import 'dart:async'; // Importe para usar o Future.wait
+
 import 'package:app_v0/features/main_page/main_page.dart';
 import 'package:app_v0/features/onboarding/onboarding_page.dart';
+import 'package:app_v0/features/car_moviment_verification/sensores_service_controller.dart';
 import 'package:app_v0/features/state_machine/external_controllers.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
@@ -53,6 +55,7 @@ class SplashPageController extends GetxController {
     Get.put(CarroController(), permanent: true);
     Get.put(DeteccaoController(), permanent: true);
     Get.put(StateMachineController(), permanent: true);
+    Get.put(VehicleDetectionController(), permanent: true);
     print("--- Fase 1: Concluída.");
 
     // --- FASE 2: INICIALIZAÇÃO ASSÍNCRONA ---
@@ -64,6 +67,9 @@ class SplashPageController extends GetxController {
         Get.find<NotificationController>().init(),
         Get.find<BluetoothController>().init(),
         Get.find<StateMachineController>().init(),
+        Get.find<VehicleDetectionController>().init(),
+        // Nota: MainPageController não tem um método init(), então não é chamado aqui.
+
       ]);
     } catch (e) {
       print("❌ Ocorreu um erro crítico durante a inicialização: $e");

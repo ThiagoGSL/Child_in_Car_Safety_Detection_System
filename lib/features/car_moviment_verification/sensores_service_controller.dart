@@ -42,6 +42,11 @@ class VehicleDetectionController extends GetxController {
   @override
   void onInit() {
     super.onInit();
+    init();
+  }
+
+  Future<void> init() async {
+    super.onInit();
     _restoreStatus();
     _initSensorMonitoring();
     print('SensorController iniciado');
@@ -241,6 +246,4 @@ class VehicleDetectionController extends GetxController {
       ),
     );
   }
-
-
 }
