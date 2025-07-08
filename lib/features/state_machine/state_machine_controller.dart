@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:app_v0/features/bluetooth/ble_controller.dart';
 import 'package:app_v0/features/car_moviment_verification/sensores_service_controller.dart';
+import 'package:app_v0/features/photos/photo_controller.dart';
 import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 import 'external_controllers.dart';
@@ -38,9 +39,10 @@ class StateMachineController extends GetxController {
   Timer? _timerAlerta;
 
   // Dependências de outros controllers, injetadas via GetX.
-  late final BluetoothController _bluetoothController;
-  late final DeteccaoController _deteccaoController;
-  late final VehicleDetectionController _vehicleDetectionController;
+  final BluetoothController _bluetoothController = Get.find<BluetoothController>();
+  final PhotoController _photoController = Get.find<PhotoController>();
+  final DeteccaoController _deteccaoController = Get.find<DeteccaoController>();
+  final VehicleDetectionController _vehicleDetectionController = Get.find<VehicleDetectionController>();
 
   @override
   void onInit() {
@@ -52,16 +54,11 @@ class StateMachineController extends GetxController {
   Future<void> init() async {
     print("StateMachineController: Iniciando");
 
-    // Obtém as instâncias dos controllers de dependência.
-    _bluetoothController = Get.find<BluetoothController>();
-    _deteccaoController = Get.find<DeteccaoController>();
-    _vehicleDetectionController = Get.find<VehicleDetectionController>();
-
     // Registra listeners para as variáveis de estado externas.
     // Qualquer alteração nelas dispara uma reavaliação da máquina de estados.
     ever(_bluetoothController.isConnected, (_) => _avaliarEstado());
     ever(_vehicleDetectionController.vehicleState, (_) => _avaliarEstado());
-    ever(_deteccaoController.faceDetectada, (_) => _avaliarEstado());
+    ever(_photoController.criancaDetectada, (_) => _avaliarEstado());
     ever(_deteccaoController.temBebe, (_) => _avaliarEstado());
     ever(_deteccaoController.tempoSeguroExpirado, (_) => _avaliarEstado());
     ever(_deteccaoController.semResposta, (_) => _avaliarEstado());
@@ -107,7 +104,7 @@ class StateMachineController extends GetxController {
           }
           else if (_vehicleDetectionController.vehicleState.value == VehicleState.moving) {
             estadoAtual.value = EstadoApp.carroandando;
-          } else if (_deteccaoController.faceDetectada.value) {
+          } else if (_photoController.criancaDetectada.value) {
             estadoAtual.value = EstadoApp.monitorando;
           }
           break;
@@ -123,7 +120,7 @@ class StateMachineController extends GetxController {
             estadoAtual.value = EstadoApp.perdadeconexao;
           } else if (_vehicleDetectionController.vehicleState.value == VehicleState.moving) {
             estadoAtual.value = EstadoApp.carroandando;
-          } else if (!_deteccaoController.faceDetectada.value) {
+          } else if (!_photoController.criancaDetectada.value) {
             estadoAtual.value = EstadoApp.conectado;
           } else if (tempoSeguroExpirado.value) {
             estadoAtual.value = EstadoApp.notificacaoinicial;
@@ -136,7 +133,7 @@ class StateMachineController extends GetxController {
             _deteccaoController.tempoSeguroExpirado.value = false;
           } else if (!_deteccaoController.temBebe.value) {
             estadoAtual.value = EstadoApp.esperando;
-          } else if (!_deteccaoController.faceDetectada.value) {
+          } else if (!_photoController.criancaDetectada.value) {
             estadoAtual.value = EstadoApp.conectado;
           } else if (_vehicleDetectionController.vehicleState.value == VehicleState.moving) {
             estadoAtual.value = EstadoApp.carroandando;
