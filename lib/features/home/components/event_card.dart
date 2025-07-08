@@ -12,15 +12,19 @@ class EventCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // NOVO: Paleta de cores para o tema escuro
-    final Color pastColor = const Color(0xFF53BF9D); // Um verde-água/ciano
-    final Color notPastColor = const Color(0xFF16213E).withOpacity(0.7); // Um azul escuro e semitransparente
+    final Color pastColor = const Color(0xFF53BF9D); // Verde-água/ciano
+    final Color notPastColor = const Color(0xFF16213E).withOpacity(0.7); // Azul escuro semitransparente
 
     return Container(
       margin: const EdgeInsets.only(left: 25, top: 15, bottom: 15, right: 10),
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: isPast ? pastColor : notPastColor,
+        // MODIFICAÇÃO: A cor de fundo será sempre a mesma.
+        color: notPastColor,
+        // MODIFICAÇÃO: A borda será adicionada condicionalmente.
+        border: isPast 
+          ? Border.all(color: pastColor, width: 2) // Borda verde se 'isPast' for true.
+          : null, // Nenhuma borda caso contrário.
         borderRadius: BorderRadius.circular(12),
       ),
       child: child,
