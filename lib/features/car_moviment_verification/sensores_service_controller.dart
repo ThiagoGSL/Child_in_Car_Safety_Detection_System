@@ -35,7 +35,7 @@ class VehicleDetectionController extends GetxController {
   final accelerometerStreamController = StreamController<AccelerometerEvent>.broadcast();
 
   // --- CONSTANTES CORRIGIDAS E ADICIONADAS ---
-  static const double _movementThreshold = 1.2; // Limiar de vibração
+  static const double _movementThreshold = 2.0; // Limiar de vibração
   static const double _locationMovementThresholdMeters = 5.0; // 5 metros, um valor mais realista
   static const int _stopDelaySeconds = 3; // CONSTANTE QUE FALTAVA FOI ADICIONADA
 
