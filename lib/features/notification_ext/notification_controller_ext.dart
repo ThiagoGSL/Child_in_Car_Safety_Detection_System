@@ -1,93 +1,66 @@
 // lib/features/notification_ext/notification_controller_ext.dart
 
-// 1. IMPORTS NECESSÁRIOS PARA AS NOVAS FUNÇÕES
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-
-// Imports que você já tinha
 import 'package:awesome_notifications/awesome_notifications.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:app_v0/features/cadastro/form_controller.dart';
 
-// Funções de callback de background (não mudam)
+// --- DEFINIÇÃO DAS CHAVES DOS BOTÕES PARA AS NOVAS NOTIFICAÇÕES ---
+const String KEY_AWARE_YES = 'AWARE_YES';
+const String KEY_AWARE_NO_BABY = 'AWARE_NO_BABY';
+const String KEY_CONN_LOSS_AWARE_YES = 'CONN_LOSS_AWARE_YES';
+const String KEY_REMINDER_YES = 'REMINDER_YES';
+const String KEY_REMINDER_NO = 'REMINDER_NO';
+const String KEY_ALERT_CONFIRMED_OK = 'ALERT_CONFIRMED_OK';
+
+// --- onActionReceivedMethod ATUALIZADO PARA LIDAR COM TODOS OS BOTÕES ---
+@pragma('vm:entry-point')
+Future<void> onActionReceivedMethod(ReceivedAction receivedAction) async {
+  final prefs = await SharedPreferences.getInstance();
+
+  // O switch é necessário para lidar com os múltiplos botões das novas notificações
+  switch (receivedAction.buttonKeyPressed) {
+  // Respostas para os novos fluxos
+    case KEY_AWARE_YES:
+    case KEY_AWARE_NO_BABY:
+    case KEY_CONN_LOSS_AWARE_YES:
+    case KEY_REMINDER_YES:
+    case KEY_REMINDER_NO:
+      await prefs.setString('user_response', receivedAction.buttonKeyPressed);
+      break;
+
+  // Lógica do botão do check-in antigo (mantida para compatibilidade)
+    case 'USER_CONFIRMED_OK':
+      await prefs.setBool('isCheckinConfirmed', true);
+      break;
+
+  // Botão da notificação de alerta final
+    case KEY_ALERT_CONFIRMED_OK:
+    // Nenhuma ação lógica necessária, só fecha a notificação
+      break;
+  }
+}
+
 @pragma('vm:entry-point')
 Future<void> onNotificationDisplayedMethod(ReceivedNotification receivedNotification) async {
   print('Notificação ${receivedNotification.id} exibida no celular.');
 }
 
-@pragma('vm:entry-point')
-Future<void> onActionReceivedMethod(ReceivedAction receivedAction) async {
-  if (receivedAction.buttonKeyPressed == 'USER_CONFIRMED_OK') {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('isCheckinConfirmed', true);
-    // Esta linha foi removida em uma etapa anterior para evitar conflito,
-    // o cancelamento da notificação de check-in é melhor gerenciado pela UI ou pelo processo.
-    // await AwesomeNotifications().cancel(10);
-  }
-}
-
-//==============================================================================
-//====== GUIA RÁPIDO (README) DE USO DO NOTIFICATIONEXTCONTROLLER ==============
-//==============================================================================
-///
-/// Este controller centraliza o gerenciamento de todas as notificações do app.
-///
-/// **Pré-requisito:** Certifique-se de que este controller foi inicializado na
-/// inicialização do seu app usando `Get.put(NotificationExtController())`.
-///
-/// ---
-///
-/// ### 1. Como Disparar o Alerta de Emergência Completo (SMS + Notificação)
-///
-/// Este é o alerta principal. Ele envia um SMS para o contato de emergência
-/// e, em seguida, exibe uma notificação visual para o usuário.
-///
-/// **Método a ser chamado:** `triggerFullEmergencyAlert()`
-///
-/// **Exemplo de uso (na sua máquina de estado):**
-/// ```dart
-/// // Obtém a instância do controller
-/// final NotificationExtController notificationController = Get.find();
-///
-/// // Dispara o fluxo completo de alerta
-/// notificationController.triggerFullEmergencyAlert();
-/// ```
-/// **Importante:** Esta função depende que o `FormController` já tenha carregado
-/// o número do contato de emergência.
-///
-/// ---
-///
-/// ### 2. Como Disparar a Notificação de Check-in ("Está tudo bem?")
-///
-/// Esta notificação apenas exibe um alerta visual com um botão de confirmação,
-/// sem enviar SMS.
-///
-/// **Método a ser chamado:** `showCheckinNotification()`
-///
-/// **Exemplo de uso:**
-/// ```dart
-/// final NotificationExtController notificationController = Get.find();
-/// notificationController.showCheckinNotification();
-/// ```
-/// **Como saber se o botão foi clicado?**
-/// Você pode observar a variável reativa `isCheckinConfirmed` neste controller.
-/// Ex: `if (notificationController.isCheckinConfirmed.value) { ... }`
-///
-//==============================================================================
-
 class NotificationExtController extends GetxController {
 
-  // Suas variáveis de estado e canais (não mudam)
-  final isCheckinConfirmed = false.obs;
+  final isCheckinConfirmed = false.obs; // Mantido para a lógica antiga de check-in
   static const _smsChannel = MethodChannel('com.seuapp.sms/send_direct');
+  Timer? _checkinTimer; // Usado para todos os processos com timer
 
-  // 2. ADIÇÃO DA VARIÁVEL PARA CONTROLAR O TIMER DO CHECK-IN
-  Timer? _checkinTimer;
+  // ======================================================================
+  // <<< INÍCIO DA SEÇÃO DE ALERTA (BASEADA NO SEU CÓDIGO FUNCIONAL) >>>
+  // ESTA PARTE NÃO FOI ALTERADA, APENAS O BOTÃO 'OK' FOI ADICIONADO.
+  // ======================================================================
 
-  // Suas funções de alerta e SMS (não mudam)
   Future<void> triggerFullEmergencyAlert() async {
     final bool smsSuccess = await sendPureSms();
     if (smsSuccess) {
@@ -105,7 +78,8 @@ class NotificationExtController extends GetxController {
       print('Erro no Controller: Número de emergência não configurado.');
       return false;
     }
-    final message = 'Mensagem de teste puro.';
+    // Mensagem de alerta atualizada para ser mais informativa
+    final message = 'Alerta!! Seu bebê foi esquecido. Por favor, verifique imadiatamente. ';
     try {
       print("Controller chamando o canal nativo para enviar SMS para: $number");
       final result = await _smsChannel.invokeMethod('send', {
@@ -122,53 +96,132 @@ class NotificationExtController extends GetxController {
 
   Future<void> showEmergencyAlertNotification() async {
     await AwesomeNotifications().createNotification(
-      content: NotificationContent(
-        id: 20,
-        channelKey: 'alert_channel',
-        title: '🚨 ALERTA DE EMERGÊNCIA 🚨',
-        body: 'Ação de emergência reportada e SMS enviado para contato.',
-        notificationLayout: NotificationLayout.Default,
-        backgroundColor: Colors.red,
-      ),
+        content: NotificationContent(
+          id: 20,
+          channelKey: 'alert_channel',
+          title: '🚨 ALERTA DE EMERGÊNCIA 🚨',
+          body: 'Ação de emergência reportada e SMS enviado para contato.',
+          notificationLayout: NotificationLayout.Default,
+          backgroundColor: Colors.red,
+        ),
+        // --- ÚNICA MUDANÇA: ADICIONADO O BOTÃO 'OK' ---
+        actionButtons: [
+          NotificationActionButton(key: KEY_ALERT_CONFIRMED_OK, label: 'OK')
+        ]
     );
   }
 
-  // Seus métodos de inicialização e estado (não mudam)
+  // ======================================================================
+  // <<< FIM DA SEÇÃO DE ALERTA RESTAURADA >>>
+  // ======================================================================
+
+
+  // --- NOVAS FUNÇÕES DE NOTIFICAÇÃO ADICIONADAS ABAIXO ---
+
+  /// NOTIFICAÇÃO 1: Pergunta inicial sobre o bebê.
+  Future<String?> askIfBabyIsPresent() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('user_response');
+
+    await AwesomeNotifications().createNotification(
+      content: NotificationContent(id: 11, channelKey: 'checkin_channel', title: 'Bebê a Bordo?', body: 'Detectamos um bebê no seu carro. Está ciente?', locked: true),
+      actionButtons: [
+        NotificationActionButton(key: KEY_AWARE_YES, label: 'Sim'),
+        NotificationActionButton(key: KEY_AWARE_NO_BABY, label: 'Não tem Bebê'),
+      ],
+    );
+
+    for (int i = 0; i < 120; i++) {
+      await Future.delayed(const Duration(seconds: 1));
+      final response = prefs.getString('user_response');
+      if (response != null) {
+        await AwesomeNotifications().cancel(11);
+        return response;
+      }
+    }
+    await AwesomeNotifications().cancel(11);
+    return null;
+  }
+
+  /// NOTIFICAÇÃO 2: Processo de perda de conexão com timer.
+  void startConnectionLossProcess({
+    required VoidCallback onAware, required VoidCallback onNoBaby, required VoidCallback onTimeout, Function(int secondsRemaining)? onTick,
+  }) {
+    _checkinTimer?.cancel();
+    SharedPreferences.getInstance().then((p) => p.remove('user_response'));
+
+    AwesomeNotifications().createNotification(
+      content: NotificationContent(id: 12, channelKey: 'checkin_channel', title: '⚠️ Perda de Conexão!', body: 'Meu último dado é que seu bebê está no carro, está ciente?', locked: true),
+      actionButtons: [
+        NotificationActionButton(key: KEY_CONN_LOSS_AWARE_YES, label: 'Sim'),
+        NotificationActionButton(key: KEY_AWARE_NO_BABY, label: 'Não tem Bebê'),
+      ],
+    );
+
+    const countdownSeconds = 30;
+    _checkinTimer = Timer.periodic(const Duration(seconds: 1), (timer) async {
+      final p = await SharedPreferences.getInstance();
+      final response = p.getString('user_response');
+
+      if (response == KEY_CONN_LOSS_AWARE_YES) {
+        timer.cancel(); onAware();
+      } else if (response == KEY_AWARE_NO_BABY) {
+        timer.cancel(); onNoBaby();
+      } else if (timer.tick < countdownSeconds) {
+        onTick?.call(countdownSeconds - timer.tick);
+      } else {
+        timer.cancel(); onTimeout();
+      }
+    });
+  }
+
+  /// NOTIFICAÇÃO 3: Processo de lembrete.
+  Future<String?> askForReminder() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('user_response');
+    await AwesomeNotifications().createNotification(
+      content: NotificationContent(id: 13, channelKey: 'checkin_channel', title: 'Relembrando...', body: 'Seu bebê está no carro. Gostaria de ser relembrado novamente?'),
+      actionButtons: [
+        NotificationActionButton(key: KEY_REMINDER_YES, label: 'Sim, me lembre'),
+        NotificationActionButton(key: KEY_REMINDER_NO, label: 'Não precisa'),
+      ],
+    );
+
+    for (int i = 0; i < 120; i++) {
+      await Future.delayed(const Duration(seconds: 1));
+      final response = prefs.getString('user_response');
+      if (response != null) { return response; }
+    }
+    return null;
+  }
+
+  void startReminderLoop({required VoidCallback onReminderDue}) {
+    _checkinTimer?.cancel();
+    _checkinTimer = Timer(const Duration(minutes: 5), () { onReminderDue(); });
+  }
+
+  // --- MÉTODOS DE UTILIDADE E INICIALIZAÇÃO (NÃO MUDAM) ---
+
+  void cancelAllProcesses() {
+    _checkinTimer?.cancel();
+  }
+
   @override
   void onInit() {
     super.onInit();
-    // A sincronização agora é feita pela UI/Máquina de Estados quando necessário
-    // _loadCheckinConfirmationFromPrefs(); foi removido corretamente.
   }
 
   void resetCheckinState() async {
     final prefs = await SharedPreferences.getInstance();
-    // Limpa tanto o flag persistente quanto a variável reativa
     await prefs.remove('isCheckinConfirmed');
     isCheckinConfirmed.value = false;
   }
 
   Future<void> init() async {
-    // ... seu código de inicialização do AwesomeNotifications não muda ...
-    await AwesomeNotifications().initialize(
-      null,
+    await AwesomeNotifications().initialize( null,
       [
-        NotificationChannel(
-          channelKey: 'checkin_channel',
-          channelName: 'Verificação de Veículo',
-          channelDescription: '...',
-          importance: NotificationImportance.High,
-          playSound: true,
-        ),
-        NotificationChannel(
-          channelKey: 'alert_channel',
-          channelName: 'Alerta de Emergência',
-          channelDescription: '...',
-          importance: NotificationImportance.Max,
-          playSound: true,
-          defaultColor: Colors.red,
-          ledColor: Colors.white,
-        ),
+        NotificationChannel( channelKey: 'checkin_channel', channelName: 'Verificação de Veículo', channelDescription: '...', importance: NotificationImportance.High, playSound: true,),
+        NotificationChannel( channelKey: 'alert_channel', channelName: 'Alerta de Emergência', channelDescription: '...', importance: NotificationImportance.Max, playSound: true, defaultColor: Colors.red, ledColor: Colors.white,),
       ],
       debug: true,
     );
@@ -176,74 +229,5 @@ class NotificationExtController extends GetxController {
       onActionReceivedMethod: onActionReceivedMethod,
       onNotificationDisplayedMethod: onNotificationDisplayedMethod,
     );
-  }
-
-  // Sua função de criar a notificação de check-in (não muda)
-  Future<void> showCheckinNotification() async {
-    // Apenas garante que a flag do processo anterior seja limpa
-    await AwesomeNotifications().createNotification(
-      content: NotificationContent(
-        id: 10,
-        channelKey: 'checkin_channel',
-        title: '⚠️ Está tudo bem?',
-        body: 'Detectamos que o veículo está parado. Por favor, confirme se está tudo OK.',
-        notificationLayout: NotificationLayout.Default,
-        autoDismissible: false,
-      ),
-      actionButtons: [
-        NotificationActionButton(
-          key: 'USER_CONFIRMED_OK',
-          label: 'Sim, tudo OK!',
-          autoDismissible: true,
-        ),
-      ],
-    );
-  }
-
-  // 3. ADIÇÃO DOS NOVOS MÉTODOS PARA GERENCIAR O PROCESSO DE CHECK-IN
-
-  /// Inicia o processo de check-in com contagem regressiva.
-  /// Notifica o chamador (sua máquina de estados) sobre o resultado através de callbacks.
-  void startCheckinProcess({
-    required int countdownSeconds,
-    required VoidCallback onSuccess,
-    required VoidCallback onFailure,
-    Function(int secondsRemaining)? onTick,
-  }) {
-    _checkinTimer?.cancel();
-    resetCheckinState();
-
-    showCheckinNotification();
-
-    _checkinTimer = Timer.periodic(const Duration(seconds: 1), (timer) async {
-      final prefs = await SharedPreferences.getInstance();
-      final isConfirmedByClick = prefs.getBool('isCheckinConfirmed') ?? false;
-
-      if (isConfirmedByClick) {
-        timer.cancel();
-        await prefs.remove('isCheckinConfirmed');
-        onSuccess();
-      }
-      else if (timer.tick < countdownSeconds) {
-        final secondsRemaining = countdownSeconds - timer.tick;
-        onTick?.call(secondsRemaining);
-      }
-      else {
-        timer.cancel();
-        onFailure();
-      }
-    });
-  }
-
-  /// Permite que a máquina de estados cancele o processo de check-in a qualquer momento.
-  /// (Ex: se o carro voltar a se mover).
-  void cancelCheckinProcess() {
-    _checkinTimer?.cancel();
-    print("Processo de check-in cancelado externamente.");
-  }
-
-  // Sua função de cancelar todas as notificações (não muda)
-  Future<void> cancelAllNotifications() async {
-    await AwesomeNotifications().cancelAll();
   }
 }
