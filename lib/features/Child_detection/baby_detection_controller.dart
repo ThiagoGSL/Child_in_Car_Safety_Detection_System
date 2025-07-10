@@ -99,7 +99,7 @@ class BabyDetectionController extends GetxController {
     try {
       final imageBytes = await imageFile.readAsBytes();
       final processedImage = await _preprocessImage(imageBytes);
-      
+      _getProcessedImageAsDisplayable(imageBytes);
       var output = List.filled(1, 0.0).reshape([1, 1]);
 
       _interpreter.run(processedImage, output);
@@ -159,6 +159,51 @@ class BabyDetectionController extends GetxController {
     ),
     );
 
+    Future<Uint8List?> _getProcessedImageAsDisplayable(Uint8List imageBytes) async {
+
+      final List<List<List<List<double>>>> processedData = await _preprocessImage(imageBytes);
+
+      final List<List<List<double>>> imageMatrix = processedData[0];
+
+      final img.Image displayableImage = img.Image(
+        width: _inputSize,
+        height: _inputSize,
+      );
+
+      for (int y = 0; y < _inputSize; y++) {
+        for (int x = 0; x < _inputSize; x++) {
+          final double pixelValue = imageMatrix[y][x][0];
+
+          final int grayValue = (pixelValue * 255).round();
+
+          displayableImage.setPixelRgb(x, y, grayValue, grayValue, grayValue);
+        }
+      }
+
+      final List<int>? pngBytes = img.encodePng(displayableImage);
+
+      if (pngBytes == null) {
+        return null;
+      }
+      processedBytes= Uint8List.fromList(pngBytes);
+
+      final Directory directory = await getApplicationDocumentsDirectory();
+      final String folderPath = '${directory.path}/ImagensProcessadas';
+      final Directory folder = Directory(folderPath);
+
+      if (!await folder.exists()) {
+        await folder.create(recursive: true);
+      }
+
+      final String fileName = 'imagem_proc_${DateTime.now().millisecondsSinceEpoch}.png';
+      final String filePath = '${folder.path}/$fileName';
+      final File finalFile = File(filePath);
+
+      print('Salvando imagem em: ${finalFile.path}');
+      finalFile.writeAsBytes(processedBytes);
+      return processedBytes;
+
+    }
     return input;
   }
 }
