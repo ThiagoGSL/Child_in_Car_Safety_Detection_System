@@ -6,12 +6,13 @@ import 'package:sensors_plus/sensors_plus.dart';
 import 'package:get/get.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../car_moviment_verification/sensores_service.dart';
-
+import '../car_moviment_verification/Database_helper.dart';
 
 enum VehicleState {moving, stopped}
 
 class VehicleDetectionController extends GetxController {
   final SensorDataRepository _repository = SensorDataRepository();
+  final DatabaseHelper _databaseHelper = DatabaseHelper(); // Instância do DatabaseHelper
 
   var vehicleState = VehicleState.stopped.obs;
   var isCollectingData = true.obs;
@@ -26,9 +27,14 @@ class VehicleDetectionController extends GetxController {
   Position? _lastPosition;
   final accelerometerStreamController = StreamController<AccelerometerEvent>.broadcast();
 
-  static const double _movementThreshold = 1.2; // Limiar de vibração
-  static const double _locationMovementThresholdMeters = 5.0; // 5 metros, um valor mais realista
-  static const int _stopDelaySeconds = 3; // CONSTANTE QUE FALTAVA FOI ADICIONADA
+  Timer? _dbReadTimer;
+  static const Duration _dbReadInterval = Duration(milliseconds: 500); // Frequência de leitura do DB
+  AccelerometerEvent? _lastAccelerometerEventFromDb;
+
+  // _movementThreshold agora se aplica à *diferença* de magnitude
+  static const double _movementThreshold = 1.0; // Ajuste este valor conforme a sensibilidade desejada
+  static const double _locationMovementThresholdMeters = 5.0;
+  static const int _stopDelaySeconds = 3;
 
   @override
   void onInit() {
@@ -36,7 +42,8 @@ class VehicleDetectionController extends GetxController {
   }
 
   Future<void> init() async{
-    _initSensorMonitoring();
+    _initSensorDataSaving();
+    _startDbReadTimer();
     print('SensorController iniciado');
   }
 
@@ -46,57 +53,126 @@ class VehicleDetectionController extends GetxController {
     _accelerometerSubscription?.cancel();
     _gyroscopeSubscription?.cancel();
     _locationSubscription?.cancel();
+    _dbReadTimer?.cancel();
     accelerometerStreamController.close();
     _repository.dispose();
     print("SensorController finalizado.");
     super.onClose();
   }
 
-  void _initSensorMonitoring() {
+  void _initSensorDataSaving() {
     _accelerometerSubscription = _repository.accelerometerStream.listen((event) {
       if (isCollectingData.value) {
         accelerometerStreamController.sink.add(event);
-        _detectVehicleStateByAccelerometer(event);
         accelerometerDisplay.value = 'Accel\nX: ${event.x.toStringAsFixed(2)}\nY: ${event.y.toStringAsFixed(2)}\nZ: ${event.z.toStringAsFixed(2)}';
+        _databaseHelper.inserirAcelerometro(event.x, event.y, event.z);
       }
     });
 
     _locationSubscription = _repository.locationStream.listen((position) {
       if (isCollectingData.value) {
         locationDisplay.value = 'Lat: ${position.latitude.toStringAsFixed(6)}\nLon: ${position.longitude.toStringAsFixed(6)}';
+        _databaseHelper.inserirLocalizacao(position.latitude, position.longitude);
       }
-
-      if (_lastPosition != null) {
-        final double distance = Geolocator.distanceBetween(
-          _lastPosition!.latitude, _lastPosition!.longitude,
-          position.latitude, position.longitude,
-        );
-        // CORREÇÃO: Usando o novo limiar mais realista
-        if (distance > _locationMovementThresholdMeters) {
-          print('Movimento detectado por GPS: ${distance.toStringAsFixed(1)}m');
-          _updateActualVehicleState(VehicleState.moving);
-        }
-      }
-      _lastPosition = position;
       _repository.saveCurrentSensorData();
+    });
+
+    _gyroscopeSubscription = _repository.gyroscopeStream.listen((event) {
+      if (isCollectingData.value) {
+        gyroscopeDisplay.value = 'Gyro\nX: ${event.x.toStringAsFixed(2)}\nY: ${event.y.toStringAsFixed(2)}\nZ: ${event.z.toStringAsFixed(2)}';
+        _databaseHelper.inserirGiroscopio(event.x, event.y, event.z);
+      }
     });
   }
 
-  void _detectVehicleStateByAccelerometer(AccelerometerEvent event) {
-    final double magnitude = sqrt(pow(event.x, 2) + pow(event.y, 2) + pow(event.z, 2));
+  // Modificado: Agora usa _lastAccelerometerEventFromDb para comparação
+  void _startDbReadTimer() {
+    _dbReadTimer = Timer.periodic(_dbReadInterval, (timer) async {
+      if (isCollectingData.value) {
+        final latestData = await _databaseHelper.getLatestData();
 
-    if (magnitude < _movementThreshold) {
-      if (_stopDetectionTimer == null || !_stopDetectionTimer!.isActive) {
-        _stopDetectionTimer = Timer(const Duration(seconds: _stopDelaySeconds), () {
+        // Lógica de detecção baseada no acelerômetro a partir do DB
+        if (latestData['ultimo_acelerometro'] != null) {
+          final currentAccelMap = latestData['ultimo_acelerometro'] as Map<String, dynamic>;
+          final currentEvent = AccelerometerEvent(
+            currentAccelMap['x'] as double,
+            currentAccelMap['y'] as double,
+            currentAccelMap['z'] as double,
+            DateTime.parse(currentAccelMap['timestamp'] as String),
+          );
+          // Passa o evento atual e o último armazenado para a função de detecção
+          _detectVehicleStateByAccelerometerFromDb(currentEvent);
+        } else {
+          // Se não houver dados de acelerômetro, consideramos parado ou inicializamos o estado
           _updateActualVehicleState(VehicleState.stopped);
-        });
+        }
+
+        // Lógica de detecção baseada na localização a partir do DB
+        if (latestData['ultima_localizacao'] != null) {
+          final locMap = latestData['ultima_localizacao'] as Map<String, dynamic>;
+          final position = Position(
+              latitude: locMap['latitude'] as double,
+              longitude: locMap['longitude'] as double,
+              timestamp: DateTime.parse(locMap['timestamp'] as String), // Converter string para DateTime
+              accuracy: 0.0, altitude: 0.0, heading: 0.0, speed: 0.0, speedAccuracy: 0.0, isMocked: false,
+              altitudeAccuracy: 0.0, headingAccuracy: 0.0
+          );
+          _detectVehicleStateByLocationFromDb(position);
+        }
       }
-    } else {
-      _updateActualVehicleState(VehicleState.moving);
-    }
+    });
   }
 
-  // LÓGICA DE ATUALIZAÇÃO DE ESTADO MELHORADA
+  // FUNÇÃO MODIFICADA: Agora compara o evento atual com o _lastAccelerometerEventFromDb
+  void _detectVehicleStateByAccelerometerFromDb(AccelerometerEvent currentEvent) {
+    final double currentMagnitude = sqrt(
+        pow(currentEvent.x, 2) + pow(currentEvent.y, 2) + pow(currentEvent.z, 2)
+    );
+    if (_lastAccelerometerEventFromDb != null) {
+      // Calcular a magnitude do evento anterior
+      final double previousMagnitude = sqrt(
+          pow(_lastAccelerometerEventFromDb!.x, 2) +
+              pow(_lastAccelerometerEventFromDb!.y, 2) +
+              pow(_lastAccelerometerEventFromDb!.z, 2)
+      );
+
+      // Calcular a diferença absoluta entre as magnitudes
+      final double magnitudeDifference = (currentMagnitude - previousMagnitude).abs();
+
+      // Comparar a diferença com o threshold
+      if (magnitudeDifference < _movementThreshold) {
+        if (_stopDetectionTimer == null || !_stopDetectionTimer!.isActive) {
+          _stopDetectionTimer = Timer(const Duration(seconds: _stopDelaySeconds), () {
+            _updateActualVehicleState(VehicleState.stopped);
+          });
+        }
+      } else {
+        _updateActualVehicleState(VehicleState.moving);
+        _stopDetectionTimer?.cancel(); // Garante que o timer de parada seja cancelado
+      }
+    } else {
+      _updateActualVehicleState(VehicleState.stopped);
+    }
+
+    // Atualiza o último evento de acelerômetro lido para a próxima comparação
+    _lastAccelerometerEventFromDb = currentEvent;
+  }
+
+  void _detectVehicleStateByLocationFromDb(Position position) {
+    if (_lastPosition != null) {
+      final double distance = Geolocator.distanceBetween(
+        _lastPosition!.latitude, _lastPosition!.longitude,
+        position.latitude, position.longitude,
+      );
+      if (distance > _locationMovementThresholdMeters) {
+        print('Movimento detectado por GPS do DB: ${distance.toStringAsFixed(1)}m');
+        _updateActualVehicleState(VehicleState.moving);
+      }
+    }
+    _lastPosition = position;
+  }
+
+  // LÓGICA DE ATUALIZAÇÃO DE ESTADO MELHORADA (SEM ALTERAÇÃO)
   void _updateActualVehicleState(VehicleState newState) {
     if (vehicleState.value != newState) {
       if (newState == VehicleState.moving) {
@@ -104,7 +180,7 @@ class VehicleDetectionController extends GetxController {
         vehicleState.value = newState;
         _onCarMoving();
         _resumeDataCollection();
-      } else { // newState == VehicleState.stopped
+      } else {
         vehicleState.value = newState;
         _onCarStopped();
         _pauseDataCollection();
@@ -121,7 +197,6 @@ class VehicleDetectionController extends GetxController {
     }
   }
 
-
   void _resumeDataCollection() {
     if (!isCollectingData.value) {
       isCollectingData.value = true;
@@ -130,12 +205,10 @@ class VehicleDetectionController extends GetxController {
   }
 
   void _onCarStopped() {
-    // No longer handling check-in logic here
     print('Vehicle stopped.');
   }
 
   void _onCarMoving() {
-    // No longer handling check-in logic here
     print('Vehicle moving.');
   }
 
