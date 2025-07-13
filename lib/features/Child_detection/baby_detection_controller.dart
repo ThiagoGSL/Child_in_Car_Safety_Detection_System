@@ -5,6 +5,8 @@ import 'package:get/get.dart';
 import 'package:image/image.dart' as img;
 import 'package:image_picker/image_picker.dart';
 import 'package:tflite_flutter/tflite_flutter.dart';
+import 'dart:io';
+import 'package:path_provider/path_provider.dart';
 
 class BabyDetectionController extends GetxController {
   static const String _modelPath = "assets/ml/model_child_detection_v5.tflite";
@@ -25,9 +27,6 @@ class BabyDetectionController extends GetxController {
   // --- Getters ---
   bool get modelReady => isModelLoaded.value && !isLoadingModel.value;
 
-  // --- MUDANÇA 1: onInit REMOVIDO ---
-  // O método onInit() foi removido. A inicialização agora é controlada
-  // externamente através do método init().
 
   @override
   void onInit() {
@@ -38,12 +37,10 @@ class BabyDetectionController extends GetxController {
     _interpreter.close();
     super.onClose();
   }
-
-  /// --- MUDANÇA 2: MÉTODO DE INICIALIZAÇÃO ASSÍNCRONO ---
-  /// Este método será chamado pelo SplashPageController para carregar o modelo.
   Future<void> init() async {
     if (isModelLoaded.value || isLoadingModel.value) {
-      print("ℹ️ Tentativa de carregar modelo que já está carregado ou em processo.");
+      print(
+          "ℹ️ Tentativa de carregar modelo que já está carregado ou em processo.");
       return;
     }
 
@@ -53,25 +50,22 @@ class BabyDetectionController extends GetxController {
 
     try {
       _interpreter = await Interpreter.fromAsset(
-        _modelPath
+          _modelPath
       );
 
       isModelLoaded.value = true;
       errorLoadingModel.value = null;
       print("✅ Modelo TFLite (BabyDetectionController) carregado com sucesso!");
-
     } catch (e) {
       errorLoadingModel.value = e.toString();
       isModelLoaded.value = false;
       print("❌ Falha ao carregar modelo (BabyDetectionController): $e");
-      // Propaga o erro para que o Future.wait no splash controller possa capturá-lo.
       throw Exception("Falha ao carregar BabyDetectionController: $e");
     } finally {
       isLoadingModel.value = false;
     }
   }
 
-  /// Atualiza a fila de confianças recentes e recalcula a média.
   void _updateAverageConfidence(double newConfidence) {
     _confidenceQueue.addLast(newConfidence);
     if (_confidenceQueue.length > _maxRecentInferences) {
@@ -84,27 +78,34 @@ class BabyDetectionController extends GetxController {
     } else {
       averageConfidence.value = 0.0;
     }
-    recentConfidences.assignAll(_confidenceQueue.toList().reversed);
+    recentConfidences.assignAll(_confidenceQueue
+        .toList()
+        .reversed);
   }
 
   Future<Map<String, dynamic>> detectInImage(XFile imageFile) async {
     if (!modelReady) {
-      final errorMsg = "Modelo não está pronto. ${errorLoadingModel.value ?? ''}";
+      final errorMsg = "Modelo não está pronto. ${errorLoadingModel.value ??
+          ''}";
       print("⚠️ $errorMsg");
       return {"error": errorMsg};
     }
 
-    final startTime = DateTime.now().millisecondsSinceEpoch;
+    final startTime = DateTime
+        .now()
+        .millisecondsSinceEpoch;
 
     try {
       final imageBytes = await imageFile.readAsBytes();
       final processedImage = await _preprocessImage(imageBytes);
-      _getProcessedImageAsDisplayable(imageBytes);
+      _saveProcessedVisual(processedImage);
       var output = List.filled(1, 0.0).reshape([1, 1]);
 
       _interpreter.run(processedImage, output);
 
-      final endTime = DateTime.now().millisecondsSinceEpoch;
+      final endTime = DateTime
+          .now()
+          .millisecondsSinceEpoch;
       lastInferenceTime.value = endTime - startTime;
 
       final double confidence = output[0][0];
@@ -122,14 +123,14 @@ class BabyDetectionController extends GetxController {
 
       lastInferenceResult.value = result;
       return result;
-
     } catch (e) {
       print("❌ Erro durante a inferência: $e");
       return {"error": "Falha na inferência: $e"};
     }
   }
 
-  Future<List<List<List<List<double>>>>> _preprocessImage(Uint8List imageBytes) async {
+  Future<List<List<List<List<double>>>>> _preprocessImage(
+      Uint8List imageBytes) async {
     img.Image? originalImage = img.decodeImage(imageBytes);
 
     if (originalImage == null) {
@@ -144,66 +145,58 @@ class BabyDetectionController extends GetxController {
     );
 
     var input = List.generate(
-      1, (i) => List.generate(
-      _inputSize, (y) => List.generate(
-        _inputSize, (x) {
-      final pixel = resizedImage.getPixel(x, y);
+      1, (i) =>
+        List.generate(
+          _inputSize, (y) =>
+            List.generate(
+              _inputSize, (x) {
+              final pixel = resizedImage.getPixel(x, y);
 
-      // Usamos a fórmula de luminância padrão para converter o pixel.
-      final luminance = (0.299 * pixel.r + 0.587 * pixel.g + 0.114 * pixel.b);
+              final luminance = (0.299 * pixel.r + 0.587 * pixel.g +
+                  0.114 * pixel.b);
 
-      // Normalizar e retornar um array com APENAS UM canal.
-      return [luminance / 255.0];
-    }
-    ),
-    ),
+              return [luminance / 255.0];
+            },
+            ),
+        ),
     );
+    return input;
+  }
 
-    Future<Uint8List?> _getProcessedImageAsDisplayable(Uint8List imageBytes) async {
-
-      final List<List<List<List<double>>>> processedData = await _preprocessImage(imageBytes);
-
+  Future<void> _saveProcessedVisual(
+      List<List<List<List<double>>>> processedData) async {
+    try {
       final List<List<List<double>>> imageMatrix = processedData[0];
 
       final img.Image displayableImage = img.Image(
-        width: _inputSize,
-        height: _inputSize,
-      );
+          width: _inputSize, height: _inputSize);
 
       for (int y = 0; y < _inputSize; y++) {
         for (int x = 0; x < _inputSize; x++) {
           final double pixelValue = imageMatrix[y][x][0];
-
           final int grayValue = (pixelValue * 255).round();
-
           displayableImage.setPixelRgb(x, y, grayValue, grayValue, grayValue);
         }
       }
 
       final List<int>? pngBytes = img.encodePng(displayableImage);
+      if (pngBytes == null) return; 
 
-      if (pngBytes == null) {
-        return null;
-      }
-      processedBytes= Uint8List.fromList(pngBytes);
+      final Uint8List processedBytes = Uint8List.fromList(pngBytes);
 
-      final Directory directory = await getApplicationDocumentsDirectory();
-      final String folderPath = '${directory.path}/ImagensProcessadas';
-      final Directory folder = Directory(folderPath);
+      final Directory? directory = await getDownloadsDirectory();
+      final String folderPath = '${directory?.path}/ImagensProcessadas';
+      await Directory(folderPath).create(recursive: true);
 
-      if (!await folder.exists()) {
-        await folder.create(recursive: true);
-      }
+      final String fileName = 'proc_${DateTime
+          .now()
+          .millisecondsSinceEpoch}.png';
+      final String filePath = '$folderPath/$fileName';
+      await File(filePath).writeAsBytes(processedBytes);
 
-      final String fileName = 'imagem_proc_${DateTime.now().millisecondsSinceEpoch}.png';
-      final String filePath = '${folder.path}/$fileName';
-      final File finalFile = File(filePath);
-
-      print('Salvando imagem em: ${finalFile.path}');
-      finalFile.writeAsBytes(processedBytes);
-      return processedBytes;
-
+      print('✅ Imagem processada salva em: $filePath');
+    } catch (e) {
+      print('❌ Erro ao salvar imagem processada: $e');
     }
-    return input;
   }
 }
