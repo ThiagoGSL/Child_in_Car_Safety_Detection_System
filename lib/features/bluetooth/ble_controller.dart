@@ -332,7 +332,7 @@ class BluetoothController extends GetxController {
       characteristicId: photoCharUuid,
     ))
         .listen((chunk) async {
-      print('📦 Chunk recebido: ${chunk.length} bytes');
+      //print('📦 Chunk recebido: ${chunk.length} bytes');
       int i = 0;
       if (!_receivingImage &&
           _lastByteOfPrevChunk == 0xFF &&

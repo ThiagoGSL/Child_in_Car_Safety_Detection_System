@@ -129,7 +129,7 @@ class HomePage extends StatelessWidget {
                     ),
                     MyTimelineTile(
                       isFirst: false,
-                      isLast: true,
+                      isLast: false,
                       isPast: isPhotoReceived,
                       isActive: isNotifyingStepActive,
                       // MODIFICAÇÃO: Adicionado GestureDetector para navegar para a galeria
@@ -154,7 +154,7 @@ class HomePage extends StatelessWidget {
                     ),
                     MyTimelineTile(
                       isFirst: false,
-                      isLast: false,
+                      isLast: true,
                       isPast: isChildDetected,
                       isActive: isDetectingStepActive,
                       eventCard: PulsingCard(

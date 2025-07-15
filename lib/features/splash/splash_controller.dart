@@ -11,6 +11,7 @@ import 'package:get_storage/get_storage.dart';
 import 'package:app_v0/features/bluetooth/ble_controller.dart';
 import 'package:app_v0/features/cadastro/form_controller.dart';
 import 'package:app_v0/features/notification/notification_controller.dart';
+import 'package:app_v0/features/notification_ext/notification_controller_ext.dart';
 import 'package:app_v0/features/photos/photo_controller.dart';
 import 'package:app_v0/features/main_page/main_page_controller.dart';
 import 'package:app_v0/features/state_machine/state_machine_controller.dart';
@@ -57,6 +58,7 @@ class SplashPageController extends GetxController {
     Get.put(MainPageController(), permanent: true);
     Get.put(BluetoothController(), permanent: true);
     Get.put(CarroController(), permanent: true);
+    Get.put(NotificationExtController(), permanent: true);
     Get.put(StateMachineController(), permanent: true);
     print("--- Fase 1: Concluída.");
 
@@ -70,6 +72,7 @@ class SplashPageController extends GetxController {
         Get.find<FormController>().init(),
         Get.find<NotificationController>().init(),
         Get.find<BluetoothController>().init(),
+        Get.find<NotificationExtController>().init(),
         Get.find<StateMachineController>().init(),
         // Nota: MainPageController não tem um método init(), então não é chamado aqui.
 

@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:app_v0/features/bluetooth/ble_controller.dart';
 import 'package:app_v0/features/car_moviment_verification/sensores_service_controller.dart';
+import 'package:app_v0/features/notification_ext/notification_controller_ext.dart';
 import 'package:app_v0/features/photos/photo_controller.dart';
 import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
@@ -28,12 +29,15 @@ enum EstadoApp {
 class StateMachineController extends GetxController {
   // O estado atual da aplicação, observável pela UI.
   final estadoAtual = EstadoApp.idle.obs;
-  final tempoSeguroExpirado = false.obs;
-  final tempoSeguro = 5.obs;
-  final tempoResposta = 5.obs;
+
+  // CORRIGIDO: Removida a variável duplicada. Usaremos a do DeteccaoController.
+  // final tempoSeguroExpirado = false.obs;
+
+  // Duração configurável para os timers.
+  final tempoSeguro = 15.obs;
+  final tempoResposta = 15.obs;
 
   // Timers para controlar processos assíncronos dentro de estados específicos.
-  // Devem ser cancelados nas ações de saída para evitar memory leaks.
   Timer? _timerSeguro;
   Timer? _timerReconexao;
   Timer? _timerAlerta;
@@ -43,11 +47,11 @@ class StateMachineController extends GetxController {
   final PhotoController _photoController = Get.find<PhotoController>();
   final DeteccaoController _deteccaoController = Get.find<DeteccaoController>();
   final VehicleDetectionController _vehicleDetectionController = Get.find<VehicleDetectionController>();
+  final NotificationExtController _notificationExtController = Get.find<NotificationExtController>();
 
   @override
   void onInit() {
     super.onInit();
-
     init();
   }
 
@@ -55,7 +59,6 @@ class StateMachineController extends GetxController {
     print("StateMachineController: Iniciando");
 
     // Registra listeners para as variáveis de estado externas.
-    // Qualquer alteração nelas dispara uma reavaliação da máquina de estados.
     ever(_bluetoothController.isConnected, (_) => _avaliarEstado());
     ever(_vehicleDetectionController.vehicleState, (_) => _avaliarEstado());
     ever(_photoController.criancaDetectada, (_) => _avaliarEstado());
@@ -63,12 +66,10 @@ class StateMachineController extends GetxController {
     ever(_deteccaoController.tempoSeguroExpirado, (_) => _avaliarEstado());
     ever(_deteccaoController.semResposta, (_) => _avaliarEstado());
 
-    // Avalia o estado inicial assim que o app começa.
     _avaliarEstado();
     print("StateMachineController: Inicialização concluída.");
   }
 
-  // Garante a limpeza dos timers quando o controller é removido da memória.
   @override
   void onClose() {
     _timerSeguro?.cancel();
@@ -79,9 +80,7 @@ class StateMachineController extends GetxController {
 
   /**
    * Avalia o estado atual e realiza as transições necessárias.
-   * * Utiliza um loop `do-while` para permitir "transições em cadeia": após uma mudança
-   * de estado, a lógica é reavaliada imediatamente para verificar se o novo estado
-   * também deve transitar. O loop para quando um estado estável é alcançado.
+   * * Utiliza um loop `do-while` para permitir "transições em cadeia".
    */
   void _avaliarEstado() {
     bool stateDidChange;
@@ -122,20 +121,18 @@ class StateMachineController extends GetxController {
             estadoAtual.value = EstadoApp.carroandando;
           } else if (!_photoController.criancaDetectada.value) {
             estadoAtual.value = EstadoApp.conectado;
-          } else if (tempoSeguroExpirado.value) {
+          }
+          // CORRIGIDO: Verifica a variável no controller correto.
+          else if (_deteccaoController.tempoSeguroExpirado.value) {
             estadoAtual.value = EstadoApp.notificacaoinicial;
           }
           break;
 
         case EstadoApp.notificacaoinicial:
-          if (!_deteccaoController.semResposta.value) {
-            estadoAtual.value = EstadoApp.monitorando;
-            _deteccaoController.tempoSeguroExpirado.value = false;
-          } else if (!_deteccaoController.temBebe.value) {
-            estadoAtual.value = EstadoApp.esperando;
-          } else if (!_photoController.criancaDetectada.value) {
-            estadoAtual.value = EstadoApp.conectado;
-          } else if (_vehicleDetectionController.vehicleState.value == VehicleState.moving) {
+        // CORRIGIDO: Lógica que causava o loop foi removida.
+        // Este estado agora é "pegajoso" e só sai por uma ação de maior prioridade
+        // ou por uma resposta explícita do usuário.
+          if (_vehicleDetectionController.vehicleState.value == VehicleState.moving) {
             estadoAtual.value = EstadoApp.carroandando;
           } else if (_deteccaoController.semResposta.value) {
             estadoAtual.value = EstadoApp.alerta;
@@ -145,20 +142,17 @@ class StateMachineController extends GetxController {
         case EstadoApp.perdadeconexao:
           if (_bluetoothController.isConnected.value) {
             estadoAtual.value = EstadoApp.monitorando;
-          } else if (!_deteccaoController.semResposta.value) {
-            estadoAtual.value = EstadoApp.relembrando;
           } else if (_deteccaoController.semResposta.value) {
             estadoAtual.value = EstadoApp.alerta;
           }
           break;
 
         case EstadoApp.relembrando:
-          if (!_deteccaoController.temBebe.value || !_deteccaoController.semResposta.value) {
+        // CORRIGIDO: Removida a saída instantânea por `!semResposta`.
+          if (!_deteccaoController.temBebe.value) {
             estadoAtual.value = EstadoApp.idle;
           } else if (_bluetoothController.isConnected.value) {
             estadoAtual.value = EstadoApp.conectado;
-          } else if (_deteccaoController.temBebe.value) {
-            estadoAtual.value = EstadoApp.relembrando;
           } else if (_deteccaoController.semResposta.value) {
             estadoAtual.value = EstadoApp.alerta;
           }
@@ -171,18 +165,14 @@ class StateMachineController extends GetxController {
           break;
 
         case EstadoApp.alerta:
-        // A saída do alerta é intencionalmente gerida apenas por uma ação explícita do usuário.
-          if (!_deteccaoController.semResposta.value) {
-            estadoAtual.value = EstadoApp.idle;
-          }
+        // CORRIGIDO: A saída deste estado agora é gerida exclusivamente
+        // pela função `usuarioRespondeuPositivamente`.
           break;
       }
 
       if (estadoAnterior != estadoAtual.value) {
-        stateDidChange = true; // Sinaliza que o loop precisa continuar para garantir a estabilidade.
+        stateDidChange = true;
         debugPrint('MUDANÇA DE ESTADO: ${estadoAnterior.name} -> ${estadoAtual.value.name}');
-
-        // Padrão de Ações: primeiro limpa o estado antigo, depois inicializa o novo.
         _executarAcaoDeSaida(estadoAnterior);
         _executarAcaoDeEntrada(estadoAtual.value);
       }
@@ -201,14 +191,10 @@ class StateMachineController extends GetxController {
 
     if (statesAwaitingResponse.contains(estadoAtual.value)) {
       debugPrint("EVENTO: Usuário respondeu positivamente a partir do estado ${estadoAtual.value.name}.");
-
       EstadoApp stateBeforeResponse = estadoAtual.value;
-
-      // Zera os gatilhos que levaram ao estado de espera.
       _deteccaoController.semResposta.value = false;
       _deteccaoController.tempoSeguroExpirado.value = false;
 
-      // Determina o próximo estado com base na resposta.
       EstadoApp? nextState;
       switch(stateBeforeResponse) {
         case EstadoApp.notificacaoinicial:
@@ -226,20 +212,15 @@ class StateMachineController extends GetxController {
 
       if (nextState != null && nextState != stateBeforeResponse) {
         debugPrint('TRANSIÇÃO FORÇADA: ${stateBeforeResponse.name} -> ${nextState.name}');
-
-        // Executa o ciclo de transição manualmente para garantir a execução das ações.
         _executarAcaoDeSaida(stateBeforeResponse);
         estadoAtual.value = nextState;
         _executarAcaoDeEntrada(nextState);
       }
-
-      // Reavalia para garantir estabilidade após a transição forçada.
       _avaliarEstado();
     }
   }
 
   /// Executa lógicas de limpeza ao sair de um estado.
-  /// Fundamental para cancelar Timers e evitar processos órfãos.
   void _executarAcaoDeSaida(EstadoApp estadoQueSaiu) {
     debugPrint("--> Ação de SAÍDA do estado: ${estadoQueSaiu.name}");
     switch (estadoQueSaiu) {
@@ -264,35 +245,37 @@ class StateMachineController extends GetxController {
   }
 
   /// Executa lógicas de inicialização ao entrar em um novo estado.
-  /// Ideal para iniciar Timers, listeners ou processos contínuos.
   void _executarAcaoDeEntrada(EstadoApp novoEstado) {
     debugPrint("--> Ação de ENTRADA no estado: ${novoEstado.name}");
     switch (novoEstado) {
       case EstadoApp.monitorando:
-      // Inicia um timer que, se não for cancelado, levará ao estado de NotificacaoInicial.
-        debugPrint("    Iniciando timer de segurança de 5 segundos.");
+        debugPrint("    Iniciando timer de segurança de ${tempoSeguro.value} segundos.");
         _timerSeguro = Timer(Duration(seconds: tempoSeguro.value), () {
           debugPrint("!!! Gatilho: TIMER DE SEGURANÇA EXPIROU !!!");
-          tempoSeguroExpirado.value = true;
+          // CORRIGIDO: Atualiza a variável no controller correto.
+          _deteccaoController.tempoSeguroExpirado.value = true;
         });
         break;
       case EstadoApp.notificacaoinicial:
-      // Se o usuário não responder dentro deste tempo, o estado escalará para Alerta.
-        debugPrint("    Iniciando timer de 10 segundos para alerta (sem resposta).");
+        debugPrint("    Iniciando timer de ${tempoResposta.value} segundos para alerta (sem resposta).");
+        final response = await _notificationExtController.askIfBabyIsPresent();
+        print(response);
         _timerAlerta = Timer(Duration(seconds: tempoResposta.value), () {
           debugPrint("!!! Gatilho: TIMER PARA ALERTA EXPIROU (sem resposta) !!!");
           _deteccaoController.semResposta.value = true;
         });
+        if (response == 'AWARE_YES'){
+          print("AAAAAAAAAAAAAAAAAAAAAAAAAA");
+          usuarioRespondeuPositivamente();
+        }
         break;
       case EstadoApp.perdadeconexao:
-      // Exemplo de um processo contínuo: tentar reconectar periodicamente.
         debugPrint("    Iniciando tentativas periódicas de reconexão a cada 3 segundos.");
         _timerReconexao = Timer.periodic(const Duration(seconds: 3), (timer) {
           debugPrint("    ...tentando reconectar o bluetooth (simulação)...");
         });
         break;
       case EstadoApp.carroandando:
-      // Ação de limpeza: cancela estados de notificação pendentes se o carro andar.
         _deteccaoController.tempoSeguroExpirado.value = false;
         _deteccaoController.semResposta.value = false;
         break;
@@ -302,6 +285,30 @@ class StateMachineController extends GetxController {
       default:
         break;
     }
+  }
+
+  void changeState(EstadoApp newState) {
+
+    EstadoApp currentState = estadoAtual.value;
+
+    // Zera os gatilhos que levaram ao estado de espera.
+    _deteccaoController.semResposta.value = false;
+    _deteccaoController.tempoSeguroExpirado.value = false;
+
+
+    // Determina o próximo estado com base na resposta.    }
+
+    if (newState != null && newState != currentState) {
+      debugPrint('TRANSIÇÃO FORÇADA: ${currentState.name} -> ${newState.name}');
+
+      // Executa o ciclo de transição manualmente para garantir a execução das ações.
+      _executarAcaoDeSaida(currentState);
+      estadoAtual.value = newState;
+      _executarAcaoDeEntrada(newState);
+    }
+
+    // Reavalia para garantir estabilidade após a transição forçada.
+    _avaliarEstado();
   }
 
   // **FUNÇÃO CORRIGIDA E MOVIDA PARA DENTRO DA CLASSE**
