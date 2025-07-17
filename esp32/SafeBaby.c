@@ -12,8 +12,11 @@ bool oldDeviceConnected = false;
 
 volatile bool isSendingPhoto = false;
 volatile bool fotoSolicitadaManualmente = false;
-// MODIFICAÇÃO: Flag para controlar o modo de transmissão ao vivo
 volatile bool liveStreamActive = false;
+
+// --- NOVAS VARIÁVEIS PARA O TEMPORIZADOR ---
+unsigned long lastPhotoSendTime = 0;
+const unsigned long photoInterval = 60000; // 60000 ms = 1 minuto
 
 // UUIDs
 #define SERVICE_UUID              "19b10000-e8f2-537e-4f6c-d104768a1214"
@@ -112,11 +115,11 @@ class CommandCallbacks: public BLECharacteristicCallbacks {
 class MyServerCallbacks : public BLEServerCallbacks {
   void onConnect(BLEServer* pServerInstance) override {
     deviceConnected = true;
-    Serial.println("Dispositivo conectado");
+    lastPhotoSendTime = millis(); // Reinicia o timer para o envio periódico
+    Serial.println("Dispositivo conectado. Solicitando foto inicial.");
   }
   void onDisconnect(BLEServer* pServerInstance) override {
     deviceConnected = false;
-    // MODIFICAÇÃO: Garante que o live stream pare na desconexão
     liveStreamActive = false; 
     Serial.println("Dispositivo desconectado");
   }
@@ -165,12 +168,12 @@ void setup() {
   pServer->setCallbacks(new MyServerCallbacks());
   BLEService* pService = pServer->createService(SERVICE_UUID);
   pPhotoCharacteristic = pService->createCharacteristic(
-                         PHOTO_CHARACTERISTIC_UUID,
-                         BLECharacteristic::PROPERTY_NOTIFY);
+                      PHOTO_CHARACTERISTIC_UUID,
+                      BLECharacteristic::PROPERTY_NOTIFY);
   pPhotoCharacteristic->addDescriptor(new BLE2902());
   pCommandCharacteristic = pService->createCharacteristic(
-                         COMMAND_CHARACTERISTIC_UUID,
-                         BLECharacteristic::PROPERTY_WRITE);
+                      COMMAND_CHARACTERISTIC_UUID,
+                      BLECharacteristic::PROPERTY_WRITE);
   pCommandCharacteristic->setCallbacks(new CommandCallbacks());
   pService->start();
   BLEAdvertising* pAdvertising = BLEDevice::getAdvertising();
@@ -183,24 +186,31 @@ void setup() {
 }
 
 
+// --- LÓGICA PRINCIPAL MODIFICADA ---
 void loop() {
   if (deviceConnected) {
+    // 1. Prioridade para solicitação de foto manual
     if (fotoSolicitadaManualmente) {
       fotoSolicitadaManualmente = false;
       Serial.println("--- Processando solicitação de foto MANUAL ---");
       captureAndSendPhoto();
+      lastPhotoSendTime = millis(); // Reseta o timer do envio periódico
     }
-    
-    // MODIFICAÇÃO: Lógica de Live Stream
-    if (liveStreamActive) {
+    // 2. Prioridade para o modo Live Stream
+    else if (liveStreamActive) {
       Serial.println("--- Enviando frame (Live Stream) ---");
       captureAndSendPhoto();
-      delay(100); // Pequeno delay para não sobrecarregar o BLE
+      delay(100); // Pequeno delay para não sobrecarregar
+    }
+    // 3. Lógica de envio periódico (se não houver manual nem live stream)
+    else if (millis() - lastPhotoSendTime >= photoInterval) {
+      Serial.println("--- Processando envio de foto PERIÓDICO (1 min) ---");
+      captureAndSendPhoto();
+      lastPhotoSendTime = millis(); // Atualiza o tempo do último envio
     }
   }
 
-  // MODIFICAÇÃO: Removido o timer de envio automático de 1 minuto
-
+  // Lógica para reiniciar o advertising quando desconectar
   if (!deviceConnected && oldDeviceConnected) {
     delay(500);
     BLEDevice::startAdvertising();
