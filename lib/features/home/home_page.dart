@@ -3,6 +3,7 @@ import 'package:app_v0/features/cadastro/form_controller.dart';
 import 'package:app_v0/features/home/components/pulsing_card.dart';
 import 'package:app_v0/features/home/components/timeline_tile.dart';
 import 'package:app_v0/features/main_page/main_page_controller.dart';
+import 'package:app_v0/features/photos/photo_controller.dart';
 import 'package:app_v0/features/state_machine/state_machine_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -14,6 +15,7 @@ class HomePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final BluetoothController bleController = Get.find<BluetoothController>();
+    final PhotoController photoController = Get.find<PhotoController>();
     final FormController formController = Get.find<FormController>();
     final MainPageController mainPageController = Get.find<MainPageController>();
     final StateMachineController stateMachineController = Get.find<StateMachineController>();
@@ -78,7 +80,7 @@ class HomePage extends StatelessWidget {
                       ),
                       TextSpan(
                         // **CHAMADA ATUALIZADA AQUI**
-                        text: stateMachineController.currentStateToString(currentState),
+                        text: stateMachineController.estadoAtual.string,
                         style: TextStyle(color: accentColor, fontSize: 16),
                       ),
                     ],
@@ -93,7 +95,7 @@ class HomePage extends StatelessWidget {
               const SizedBox(height: 10),
               Obx(() {
                 bool isConnected = bleController.isConnected.value;
-                bool isChildDetected = bleController.childDetected.value;
+                bool isChildDetected = photoController.criancaDetectada.value;
                 bool isPhotoReceived = bleController.receivedImage.value != null;
 
                 bool isConnectingStepActive = !isConnected;
@@ -129,7 +131,7 @@ class HomePage extends StatelessWidget {
                     ),
                     MyTimelineTile(
                       isFirst: false,
-                      isLast: true,
+                      isLast: false,
                       isPast: isPhotoReceived,
                       isActive: isNotifyingStepActive,
                       // MODIFICAÇÃO: Adicionado GestureDetector para navegar para a galeria
@@ -154,23 +156,29 @@ class HomePage extends StatelessWidget {
                     ),
                     MyTimelineTile(
                       isFirst: false,
-                      isLast: false,
+                      isLast: true,
                       isPast: isChildDetected,
                       isActive: isDetectingStepActive,
-                      eventCard: PulsingCard(
-                        isPulsing: isDetectingStepActive,
-                        child: Container(
-                          constraints: const BoxConstraints(minHeight: 48),
-                          alignment: Alignment.center,
-                          child: Text(
-                            isChildDetected ? 'BEBÊ DETECTADO' : 'NENHUM BEBÊ DETECTADO',
-                            textAlign: TextAlign.center,
-                            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13.5),
+                      eventCard: GestureDetector(
+                        onTap: () {
+                          mainPageController.onItemTapped(2); // Muda para a aba de Configurações
+                          mainPageController.navigateToPhotoPage(true); // Mostra a PhotoPage
+                        },
+                        child: PulsingCard(
+                          isPulsing: isDetectingStepActive,
+                          child: Container(
+                            constraints: const BoxConstraints(minHeight: 48),
+                            alignment: Alignment.center,
+                            child: Text(
+                              isChildDetected ? 'BEBÊ DETECTADO' : 'NENHUM BEBÊ DETECTADO',
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13.5),
                           ),
                         ),
                       ),
                     ),
-                  ],
+                  ),
+                ],
                 );
               }),
               const Spacer(),

@@ -73,7 +73,6 @@ class SplashPageController extends GetxController {
         Get.find<NotificationController>().init(),
         Get.find<BluetoothController>().init(),
         Get.find<NotificationExtController>().init(),
-        Get.find<StateMachineController>().init(),
         // Nota: MainPageController não tem um método init(), então não é chamado aqui.
 
       ]);
