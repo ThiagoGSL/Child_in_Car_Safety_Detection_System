@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:app_v0/features/bluetooth/ble_controller.dart';
 import 'package:app_v0/features/car_moviment_verification/sensores_service_controller.dart';
+import 'package:app_v0/features/notification_ext/notification_controller_ext.dart';
 import 'package:app_v0/features/photos/photo_controller.dart';
 import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
@@ -39,6 +40,7 @@ class StateMachineController extends GetxController {
   Timer? _timerAlerta;
 
   // Dependências de outros controllers, injetadas via GetX.
+  final NotificationExtController _notificationExtController = Get.find<NotificationExtController>();
   final BluetoothController _bluetoothController = Get.find<BluetoothController>();
   final PhotoController _photoController = Get.find<PhotoController>();
   final DeteccaoController _deteccaoController = Get.find<DeteccaoController>();
@@ -285,6 +287,7 @@ class StateMachineController extends GetxController {
         });
         break;
       case EstadoApp.perdadeconexao:
+      
       // Exemplo de um processo contínuo: tentar reconectar periodicamente.
         debugPrint("    Iniciando tentativas periódicas de reconexão a cada 3 segundos.");
         _timerReconexao = Timer.periodic(const Duration(seconds: 3), (timer) {

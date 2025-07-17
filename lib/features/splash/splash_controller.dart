@@ -2,6 +2,7 @@ import 'dart:async'; // Importe para usar o Future.wait
 
 import 'package:app_v0/features/Child_detection/baby_detection_controller.dart';
 import 'package:app_v0/features/main_page/main_page.dart';
+import 'package:app_v0/features/notification_ext/notification_controller_ext.dart';
 import 'package:app_v0/features/onboarding/onboarding_page.dart';
 import 'package:app_v0/features/car_moviment_verification/sensores_service_controller.dart';
 import 'package:app_v0/features/state_machine/external_controllers.dart';
@@ -57,6 +58,7 @@ class SplashPageController extends GetxController {
     Get.put(MainPageController(), permanent: true);
     Get.put(BluetoothController(), permanent: true);
     Get.put(CarroController(), permanent: true);
+    Get.put(NotificationExtController(), permanent: true);
     Get.put(StateMachineController(), permanent: true);
     print("--- Fase 1: Concluída.");
 
@@ -70,6 +72,7 @@ class SplashPageController extends GetxController {
         Get.find<FormController>().init(),
         Get.find<NotificationController>().init(),
         Get.find<BluetoothController>().init(),
+        Get.find<NotificationExtController>().init(),
         Get.find<StateMachineController>().init(),
         // Nota: MainPageController não tem um método init(), então não é chamado aqui.
 
