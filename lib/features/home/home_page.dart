@@ -7,6 +7,7 @@ import 'package:app_v0/features/state_machine/state_machine_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:auto_size_text/auto_size_text.dart';
+import 'package:app_v0/features/notification/notification_ext_controller.dart';
 
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
@@ -170,6 +171,37 @@ class HomePage extends StatelessWidget {
                         ),
                       ),
                     ),
+                   // POP-UP REATIVO DE NOTIFICAÇÃO
+                   Obx(() {
+                     final notificationController = Get.find<NotificationExtController>();
+                     final popup = notificationController.popupData.value;
+                     if (popup == null) return SizedBox.shrink();
+                     return Card(
+                       color: Colors.amber[100],
+                       margin: EdgeInsets.symmetric(vertical: 12, horizontal: 0),
+                       child: Padding(
+                         padding: const EdgeInsets.all(16.0),
+                         child: Column(
+                           crossAxisAlignment: CrossAxisAlignment.start,
+                           children: [
+                             Text(popup.title, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+                             SizedBox(height: 8),
+                             Text(popup.message),
+                             SizedBox(height: 12),
+                             Row(
+                               children: popup.buttons.map((btn) => Padding(
+                                 padding: const EdgeInsets.only(right: 8.0),
+                                 child: ElevatedButton(
+                                   onPressed: btn.onPressed,
+                                   child: Text(btn.label),
+                                 ),
+                               )).toList(),
+                             ),
+                           ],
+                         ),
+                       ),
+                     );
+                   }),
                   ],
                 );
               }),

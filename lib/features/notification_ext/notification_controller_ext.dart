@@ -17,6 +17,20 @@ const String KEY_REMINDER_YES = 'REMINDER_YES';
 const String KEY_REMINDER_NO = 'REMINDER_NO';
 const String KEY_ALERT_CONFIRMED_OK = 'ALERT_CONFIRMED_OK';
 
+// --- CLASSES PARA POPUP REATIVO NA HOME ---
+class NotificationPopupData {
+  final String title;
+  final String message;
+  final List<NotificationPopupButton> buttons;
+  NotificationPopupData({required this.title, required this.message, required this.buttons});
+}
+
+class NotificationPopupButton {
+  final String label;
+  final VoidCallback onPressed;
+  NotificationPopupButton({required this.label, required this.onPressed});
+}
+
 // --- onActionReceivedMethod ATUALIZADO PARA LIDAR COM TODOS OS BOTÕES ---
 @pragma('vm:entry-point')
 Future<void> onActionReceivedMethod(ReceivedAction receivedAction) async {
@@ -55,6 +69,7 @@ class NotificationExtController extends GetxController {
   final isCheckinConfirmed = false.obs; // Mantido para a lógica antiga de check-in
   static const _smsChannel = MethodChannel('com.seuapp.sms/send_direct');
   Timer? _checkinTimer; // Usado para todos os processos com timer
+  final Rx<NotificationPopupData?> popupData = Rx<NotificationPopupData?>(null);
 
   // ======================================================================
   // <<< INÍCIO DA SEÇÃO DE ALERTA (BASEADA NO SEU CÓDIGO FUNCIONAL) >>>
@@ -198,6 +213,53 @@ class NotificationExtController extends GetxController {
   void startReminderLoop({required VoidCallback onReminderDue}) {
     _checkinTimer?.cancel();
     _checkinTimer = Timer(const Duration(minutes: 5), () { onReminderDue(); });
+  }
+
+  void showInitialPopup({VoidCallback? onYes, VoidCallback? onNoBaby}) {
+    popupData.value = NotificationPopupData(
+      title: 'Bebê a Bordo?',
+      message: 'Detectamos um bebê no seu carro. Está ciente?',
+      buttons: [
+        NotificationPopupButton(label: 'Sim', onPressed: () {
+          onYes?.call();
+          popupData.value = null;
+        }),
+        NotificationPopupButton(label: 'Não tem Bebê', onPressed: () {
+          onNoBaby?.call();
+          popupData.value = null;
+        }),
+      ],
+    );
+  }
+
+  void showConnectionLossPopup({VoidCallback? onYes, VoidCallback? onNoBaby}) {
+    popupData.value = NotificationPopupData(
+      title: '⚠️ Perda de Conexão!',
+      message: 'Meu último dado é que seu bebê está no carro, está ciente?',
+      buttons: [
+        NotificationPopupButton(label: 'Sim', onPressed: () {
+          onYes?.call();
+          popupData.value = null;
+        }),
+        NotificationPopupButton(label: 'Não tem Bebê', onPressed: () {
+          onNoBaby?.call();
+          popupData.value = null;
+        }),
+      ],
+    );
+  }
+
+  void showAlertPopup({VoidCallback? onOk}) {
+    popupData.value = NotificationPopupData(
+      title: '🚨 ALERTA DE EMERGÊNCIA 🚨',
+      message: 'Ação de emergência reportada e SMS enviado para contato.',
+      buttons: [
+        NotificationPopupButton(label: 'OK', onPressed: () {
+          onOk?.call();
+          popupData.value = null;
+        }),
+      ],
+    );
   }
 
   // --- MÉTODOS DE UTILIDADE E INICIALIZAÇÃO (NÃO MUDAM) ---
