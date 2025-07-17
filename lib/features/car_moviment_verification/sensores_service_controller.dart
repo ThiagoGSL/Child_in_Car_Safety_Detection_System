@@ -125,9 +125,12 @@ class VehicleDetectionController extends GetxController {
 
   // FUNÇÃO MODIFICADA: Agora compara o evento atual com o _lastAccelerometerEventFromDb
   void _detectVehicleStateByAccelerometerFromDb(AccelerometerEvent currentEvent) {
+    // Calcular a magnitude do evento atual
     final double currentMagnitude = sqrt(
         pow(currentEvent.x, 2) + pow(currentEvent.y, 2) + pow(currentEvent.z, 2)
     );
+
+    // Se já temos um evento anterior para comparar
     if (_lastAccelerometerEventFromDb != null) {
       // Calcular a magnitude do evento anterior
       final double previousMagnitude = sqrt(
@@ -168,39 +171,26 @@ class VehicleDetectionController extends GetxController {
         print('Movimento detectado por GPS do DB: ${distance.toStringAsFixed(1)}m');
         _updateActualVehicleState(VehicleState.moving);
       }
+      if (distance <= _locationMovementThresholdMeters) {
+        _updateActualVehicleState(VehicleState.stopped);
+      }
     }
     _lastPosition = position;
   }
 
-  // LÓGICA DE ATUALIZAÇÃO DE ESTADO MELHORADA (SEM ALTERAÇÃO)
   void _updateActualVehicleState(VehicleState newState) {
     if (vehicleState.value != newState) {
       if (newState == VehicleState.moving) {
         _stopDetectionTimer?.cancel();
         vehicleState.value = newState;
         _onCarMoving();
-        _resumeDataCollection();
+
       } else {
         vehicleState.value = newState;
         _onCarStopped();
-        _pauseDataCollection();
       }
     } else if (newState == VehicleState.moving) {
       _stopDetectionTimer?.cancel();
-    }
-  }
-
-  void _pauseDataCollection() {
-    if (isCollectingData.value) {
-      isCollectingData.value = false;
-      _showInfoDialog('Coleta Pausada', 'Veículo parado. Coleta de dados pausada.');
-    }
-  }
-
-  void _resumeDataCollection() {
-    if (!isCollectingData.value) {
-      isCollectingData.value = true;
-      _showInfoDialog('Coleta Retomada', 'Veículo em Movimento.');
     }
   }
 
@@ -212,18 +202,5 @@ class VehicleDetectionController extends GetxController {
     print('Vehicle moving.');
   }
 
-  void _showInfoDialog(String title, String message) {
-    Get.dialog(
-      AlertDialog(
-        title: Text(title),
-        content: Text(message),
-        actions: [
-          TextButton(
-            onPressed: () => Get.back(),
-            child: const Text('OK'),
-          ),
-        ],
-      ),
-    );
-  }
+
 }
