@@ -96,8 +96,7 @@ flutter:
   assets:
 
     - lib/assets/
-    - assets/ml/model_child_detection_v5.tflite
-    - assets/ml/labels.txt
+    - assets/ml/model_child_detection_v6.tflite
   #   - images/a_dot_ham.jpeg
 
   # An image asset can refer to one or more resolution-specific "variants", see
