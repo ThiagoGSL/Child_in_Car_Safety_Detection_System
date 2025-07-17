@@ -27,7 +27,7 @@ class StateMachineController extends GetxController {
   final tempoSeguroExpirado = false.obs;
   final tempoSeguro = 5.obs;
   final tempoResposta = 5.obs;
-  final tempoLembrete = 10.obs;
+  final tempoLembrete = 15.obs;
 
   // Timers para controlar processos assíncronos dentro de estados específicos.
   // Devem ser cancelados nas ações de saída para evitar memory leaks.
@@ -263,8 +263,6 @@ class StateMachineController extends GetxController {
     final statesAwaitingResponse = [
       EstadoApp.notificacaoinicial,
       EstadoApp.alerta,
-      EstadoApp.perdadeconexao,
-      EstadoApp.relembrando,
     ];
 
     if (statesAwaitingResponse.contains(estadoAtual.value)) {
