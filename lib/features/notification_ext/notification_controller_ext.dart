@@ -46,10 +46,10 @@ class NotificationExtController extends GetxController {
     final bool smsSuccess = await sendPureSms();
     if (smsSuccess) {
       await Future.delayed(const Duration(milliseconds: 500));
-      await showEmergencyAlertNotification();
     } else {
-      print("Fluxo de alerta interrompido pois o envio de SMS falhou.");
+      print("SMS falhou.");
     }
+    await showEmergencyAlertNotification();
   }
 
   Future<bool> sendPureSms() async {
