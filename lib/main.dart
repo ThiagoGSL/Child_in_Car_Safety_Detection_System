@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_background_service/flutter_background_service.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
+import 'package:flutter/services.dart';
 
 // 1. Crie a função de ponto de entrada para o background
 @pragma('vm:entry-point')
@@ -27,7 +28,15 @@ void onStart(ServiceInstance service) async {
 }
 
 void main() async {
+  // O WidgetsFlutterBinding.ensureInitialized() é importante para garantir
+  // a inicialização de plugins do Flutter antes da execução do app.
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Garante que o app rode apenas em modo retrato.
+  await SystemChrome.setPreferredOrientations([
+    DeviceOrientation.portraitUp,
+    DeviceOrientation.portraitDown,
+  ]);
 
   // 3. Inicialize o GetStorage para a UI principal.
   await GetStorage.init();
