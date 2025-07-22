@@ -203,4 +203,35 @@ class StateMachineController extends GetxController {
 
     // Lógica para esperar a resposta e decidir se inicia o ciclo de 5 minutos ou volta para monitoramento
   }
+
+  String currentStateToString(EstadoApp currentState) {
+    switch (currentState) {
+      case EstadoApp.idle:
+        return "Idle";
+
+      case EstadoApp.conectado:
+        return "Conectado";
+
+      case EstadoApp.carroandando:
+        return "Carro Andando";
+
+      case EstadoApp.monitorando:
+        return "Monitorando";
+
+      case EstadoApp.notificacaoinicial:
+        return "Notificação Inicial Enviada";
+
+      case EstadoApp.alerta:
+        return "Alerta";
+
+      case EstadoApp.perdadeconexao:
+        return "Perdeu Conexão";
+
+      case EstadoApp.relembrando:
+        return "Relembrando";
+
+      case EstadoApp.esperando:
+        return "Esperando";
+    }
+  }
 }
