@@ -31,9 +31,9 @@ class VehicleDetectionController extends GetxController {
   AccelerometerEvent? _lastAccelerometerEventFromDb;
 
   // _movementThreshold agora se aplica à *diferença* de magnitude
-  static const double _movementThreshold = 1.0; // Ajuste este valor conforme a sensibilidade desejada
-  static const double _locationMovementThresholdMeters = 5.0;
-  static const int _stopDelaySeconds = 3;
+  static const double _movementThreshold = 2.0; // Ajuste este valor conforme a sensibilidade desejada
+  static const double _locationMovementThresholdMeters = 3.0;
+  static const int _stopDelaySeconds = 1;
 
   @override
   void onInit() {
@@ -166,6 +166,9 @@ class VehicleDetectionController extends GetxController {
       if (distance > _locationMovementThresholdMeters) {
         print('Movimento detectado por GPS do DB: ${distance.toStringAsFixed(1)}m');
         _updateActualVehicleState(VehicleState.moving);
+      }
+      if (distance < _locationMovementThresholdMeters) {
+        _updateActualVehicleState(VehicleState.stopped);
       }
     }
     _lastPosition = position;
