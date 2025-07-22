@@ -2,11 +2,18 @@ import 'package:app_v0/features/splash/splash_page.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
+import 'package:flutter/services.dart';
 
 void main() async {
   // O WidgetsFlutterBinding.ensureInitialized() é importante para garantir
   // a inicialização de plugins do Flutter antes da execução do app.
   WidgetsFlutterBinding.ensureInitialized();
+
+  await SystemChrome.setPreferredOrientations([
+    DeviceOrientation.portraitUp,
+    DeviceOrientation.portraitDown,
+  ]);
+
   await GetStorage.init();
   runApp(const App());
 }
