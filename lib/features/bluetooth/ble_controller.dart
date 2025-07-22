@@ -61,22 +61,22 @@ class BluetoothController extends GetxController {
       }
     });
 
-///    ever(receivedImage, (Uint8List? imageData) {
-///      if (imageData != null && imageData.isNotEmpty) {
-///        Get.snackbar(
-///          "Foto Recebida!",
-///           "Uma nova imagem foi salva com sucesso.",
-///           snackPosition: SnackPosition.TOP,
-///           backgroundColor: const Color(0xFF16213E),
-///           colorText: Colors.white,
-///           margin: const EdgeInsets.all(12),
-///           borderRadius: 12,
-///           icon: const Icon(Icons.check_circle_outline, color: Color(0xFF53BF9D)),
-///           duration: const Duration(seconds: 3),);
-///      }
-//    }
-///    )
-///    ;
+    ever(receivedImage, (Uint8List? imageData) {
+      if (imageData != null && imageData.isNotEmpty) {
+        Get.snackbar(
+          "Foto Recebida!",
+           "Uma nova imagem foi salva com sucesso.",
+           snackPosition: SnackPosition.TOP,
+           backgroundColor: const Color(0xFF16213E),
+           colorText: Colors.white,
+           margin: const EdgeInsets.all(12),
+           borderRadius: 12,
+           icon: const Icon(Icons.check_circle_outline, color: Color(0xFF53BF9D)),
+           duration: const Duration(seconds: 3),);
+      }
+   }
+    )
+    ;
 
     print("BluetoothController: Configuração concluída. Aguardando status do BLE.");
   }
@@ -200,6 +200,7 @@ class BluetoothController extends GetxController {
         );
 
         _subscribeToCharacteristics(device.id);
+        requestPhoto();
       } else if (state.connectionState == DeviceConnectionState.disconnected) {
         print('❌ Desconectado de ${device.name}');
         disconnect();

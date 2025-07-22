@@ -16,6 +16,7 @@ class OnboardingController extends GetxController {
   var notificationsPermissionGranted = false.obs;
   // MODIFICAÇÃO: Variável para o estado da permissão de localização.
   var locationPermissionGranted = false.obs;
+  var smsPermissionGranted= false.obs;
   var isFormValid = false.obs;
 
   final BluetoothController bleController = Get.find<BluetoothController>();
@@ -42,6 +43,7 @@ class OnboardingController extends GetxController {
     bluetoothPermissionGranted.value = await Permission.bluetoothConnect.isGranted && await Permission.bluetoothScan.isGranted;
     notificationsPermissionGranted.value = await Permission.notification.isGranted;
     locationPermissionGranted.value = await Permission.locationWhenInUse.isGranted;
+    smsPermissionGranted.value = await Permission.sms.isGranted;
   }
 
   void _showSettingsDialog(String title, String content) {
@@ -108,6 +110,18 @@ class OnboardingController extends GetxController {
       _showSettingsDialog(
         'Permissão de Localização',
         'A permissão de Localização foi negada permanentemente. Por favor, habilite-a nas configurações do aplicativo para usar todas as funcionalidades.',
+      );
+    }
+  }
+
+  void requestSmsPermission() async {
+    final status = await Permission.sms.request();
+    smsPermissionGranted.value = status.isGranted;
+
+    if (status.isPermanentlyDenied) {
+      _showSettingsDialog(
+        'Permissão de SMS',
+        'A permissão de SMS é crucial para os alertas de emergência. Por favor, habilite-a nas configurações do aplicativo.',
       );
     }
   }

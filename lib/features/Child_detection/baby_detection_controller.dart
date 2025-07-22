@@ -7,7 +7,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:tflite_flutter/tflite_flutter.dart';
 
 class BabyDetectionController extends GetxController {
-  static const String _modelPath = "assets/ml/model_child_detection_v5.tflite";
+  static const String _modelPath = "assets/ml/model_child_detection_v6.tflite";
   static const int _inputSize = 224;
   static const int _maxRecentInferences = 5;
 

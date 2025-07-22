@@ -94,7 +94,8 @@ class OnboardingPage extends StatelessWidget {
                           // MODIFICAÇÃO: Agora exige as três permissões.
                           isButtonEnabled = controller.bluetoothPermissionGranted.value &&
                                             controller.notificationsPermissionGranted.value &&
-                                            controller.locationPermissionGranted.value;
+                                            controller.locationPermissionGranted.value &&
+                                            controller.smsPermissionGranted.value;
                           break;
                         case 2:
                           isButtonEnabled = bleController.isConnected.value;
@@ -236,6 +237,14 @@ class _OnboardingPermissionsStep extends StatelessWidget {
                 isGranted: controller.locationPermissionGranted.value,
                 onPressed: controller.requestLocationPermission,
               )),
+          const SizedBox(height: 12),
+          Obx(() => _PermissionRequestTile(
+            icon: Icons.sms,
+            title: 'SMS',
+            subtitle: 'Para enviar alertas de emergência para seu contato.',
+            isGranted: controller.smsPermissionGranted.value,
+            onPressed: controller.requestSmsPermission, 
+          )),
         ],
       ),
     );
