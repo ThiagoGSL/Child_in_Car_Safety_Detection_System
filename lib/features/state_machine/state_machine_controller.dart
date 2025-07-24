@@ -9,6 +9,8 @@ import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'external_controllers.dart';
+import 'package:flutter_background_service/flutter_background_service.dart';
+
 
 // SEU ENUM ORIGINAL DE ESTADOS, MANTIDO
 enum EstadoApp {
@@ -91,6 +93,13 @@ class StateMachineController extends GetxController {
           break;
       }
 
+      final String estadoComoString = currentStateToString(estadoAtual.value);
+      FlutterBackgroundService().invoke(
+        'updateState',
+        {
+          'state': estadoComoString,
+        },
+      );
       if (estadoAnterior != estadoAtual.value) {
         stateDidChange = true;
         debugPrint('MUDANÇA DE ESTADO: ${estadoAnterior.name} -> ${estadoAtual.value.name}');

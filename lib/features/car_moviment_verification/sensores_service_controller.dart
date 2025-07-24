@@ -31,9 +31,9 @@ class VehicleDetectionController extends GetxController {
   AccelerometerEvent? _lastAccelerometerEventFromDb;
 
   // _movementThreshold agora se aplica à *diferença* de magnitude
-  static const double _movementThreshold = 2.0; // Ajuste este valor conforme a sensibilidade desejada
-  static const double _locationMovementThresholdMeters = 5.5;
-  static const int _stopDelaySeconds = 1;
+  static const double _movementThreshold = 1.0; // Ajuste este valor conforme a sensibilidade desejada
+  static const double _locationMovementThresholdMeters = 5.0;
+  static const int _stopDelaySeconds = 3;
 
   @override
   void onInit() {
