@@ -4,19 +4,16 @@ import 'dart:ui';
 import 'package:app_v0/features/splash/splash_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_background_service/flutter_background_service.dart';
-// O import 'flutter_background_service_android' já não é necessário aqui.
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:flutter/services.dart';
 
-// Importa a biblioteca para criar o canal de notificação
 import 'package:awesome_notifications/awesome_notifications.dart';
 
 const int FOREGROUND_SERVICE_NOTIFICATION_ID = 100;
 
 @pragma('vm:entry-point')
 void onStart(ServiceInstance service) async {
-  // Garante que os plugins estão disponíveis neste isolate.
   DartPluginRegistrant.ensureInitialized();
 
   print('BACKGROUND SERVICE: Isolate iniciado.');
@@ -24,12 +21,10 @@ void onStart(ServiceInstance service) async {
   await GetStorage.init();
   final box = GetStorage();
 
-  // Garante que sempre haverá um estado inicial
   if (box.read('currentState') == null) {
     box.write('currentState', 'Serviço Iniciado');
   }
 
-  // Listener para parar o serviço
   service.on('stopService').listen((event) {
     service.stopSelf();
   });
@@ -49,32 +44,23 @@ void onStart(ServiceInstance service) async {
 
     final currentState = box.read('currentState') ?? 'Aguardando...';
 
-    // ===================================================================
-    // <<< NOVA LÓGICA DE NOTIFICAÇÃO USANDO AWESOME NOTIFICATIONS >>>
-    // Cria e atualiza a notificação persistente.
     AwesomeNotifications().createNotification(
       content: NotificationContent(
-        id: FOREGROUND_SERVICE_NOTIFICATION_ID, // ID Fixo para que a notificação seja atualizada
-        channelKey: 'safebaby_service_channel', // O mesmo canal criado no main()
+        id: FOREGROUND_SERVICE_NOTIFICATION_ID,
+        channelKey: 'safebaby_service_channel',
         title: 'SafeBaby: $currentState',
         body: 'Monitoramento ativo. Verificado às ${now.hour}:${now.minute}:${now.second}',
         notificationLayout: NotificationLayout.Default,
-        locked: true, // Mantém a notificação persistente
-        autoDismissible: false, // Impede que o utilizador a remova
+        locked: true,
+        autoDismissible: false,
       ),
     );
-    // ===================================================================
 
-    print('BACKGROUND SERVICE: Estado atual é "$currentState" em $now');
   });
 }
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
-  // ===================================================================
-  // Inicializa o awesome_notifications e cria o canal ANTES de tudo.
-  // Isto é crucial para garantir que o canal existe.
   await AwesomeNotifications().initialize(
     'resource://drawable/ic_bg_service_small',
     [
@@ -91,7 +77,6 @@ Future<void> main() async {
     ],
     debug: true,
   );
-  // ===================================================================
 
   await SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
@@ -103,12 +88,9 @@ Future<void> main() async {
   await service.configure(
     androidConfiguration: AndroidConfiguration(
       onStart: onStart,
-      // Continua a ser 'true' para o SO não matar o serviço.
       isForegroundMode: false,
       autoStart: true,
-      // O ID do canal aqui DEVE ser exatamente o mesmo que o 'channelKey' acima.
       notificationChannelId: 'safebaby_service_channel',
-      // Estes são agora apenas um fallback para a notificação inicial.
       initialNotificationTitle: 'SafeBaby',
       initialNotificationContent: 'A iniciar o serviço de monitoramento...',
     ),
