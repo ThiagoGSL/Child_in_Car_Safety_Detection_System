@@ -4,11 +4,7 @@ class PulsingCard extends StatefulWidget {
   final Widget child;
   final bool isPulsing;
 
-  const PulsingCard({
-    super.key,
-    required this.child,
-    required this.isPulsing,
-  });
+  const PulsingCard({super.key, required this.child, required this.isPulsing});
 
   @override
   State<PulsingCard> createState() => _PulsingCardState();
@@ -18,6 +14,9 @@ class _PulsingCardState extends State<PulsingCard>
     with SingleTickerProviderStateMixin {
   late AnimationController _animationController;
   late Animation<double> _animation;
+
+  // Cores da nova identidade visual
+  final Color primaryColor = const Color(0xFF53A194);
 
   @override
   void initState() {
@@ -44,7 +43,7 @@ class _PulsingCardState extends State<PulsingCard>
         _animationController.repeat(reverse: true);
       } else {
         _animationController.stop();
-        _animationController.value = 1.0; // Reseta a opacidade para o valor completo
+        _animationController.value = 1.0;
       }
     }
   }
@@ -57,9 +56,18 @@ class _PulsingCardState extends State<PulsingCard>
 
   @override
   Widget build(BuildContext context) {
+    Color backgroundColor =
+        widget.isPulsing ? Colors.transparent : Colors.transparent;
+
     return FadeTransition(
       opacity: _animation,
-      child: widget.child,
+      child: Container(
+        decoration: BoxDecoration(
+          color: backgroundColor,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: widget.child,
+      ),
     );
   }
 }

@@ -12,16 +12,15 @@ class OnboardingBlePage extends StatefulWidget {
 
 class _OnboardingBlePageState extends State<OnboardingBlePage> {
   final BluetoothController controller = Get.find<BluetoothController>();
-  final Color accentColor = const Color(0xFF53BF9D);
-  final Color tileColor = const Color(0xFF16213E);
+  final Color primaryColor = const Color(0xFF53A194);
+  final Color textColor = const Color(0xFF524F42);
+  final Color secondaryColor = const Color(0xFFE5E0D2);
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      // Inicia a busca contínua ao entrar na página
       if (!controller.isScanning.value) {
-        // Correção: Garante que a busca seja manual, sem conexão automática.
         controller.startManualScan();
       }
     });
@@ -29,7 +28,6 @@ class _OnboardingBlePageState extends State<OnboardingBlePage> {
 
   @override
   void dispose() {
-    // Garante que a busca pare ao sair da página
     controller.stopScan();
     super.dispose();
   }
@@ -44,14 +42,14 @@ class _OnboardingBlePageState extends State<OnboardingBlePage> {
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Row(
+              Row(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   Flexible(
                     child: Text(
                       'Conecte o Dispositivo',
                       style: TextStyle(
-                        color: Colors.white,
+                        color: textColor,
                         fontSize: 26,
                         fontWeight: FontWeight.bold,
                       ),
@@ -60,100 +58,104 @@ class _OnboardingBlePageState extends State<OnboardingBlePage> {
                 ],
               ),
               const SizedBox(height: 15),
-              const Text(
+              Text(
                 'Ligue o seu dispositivo e conecte via Bluetooth.',
                 style: TextStyle(
-                  color: Colors.white70,
+                  color: textColor.withOpacity(0.7),
                   fontSize: 16,
                 ),
               ),
               const SizedBox(height: 20),
-              SizedBox(
-                height: 300,
-                child: Obx(() {
-                  final connectedDevice = controller.connectedDevice.value;
-                  final foundDevices = controller.foundDevices.toList();
+              // Use Expanded para que a lista ocupe o máximo de espaço possível
+              // A rolagem da ListView.builder é gerenciada pelo SingleChildScrollView pai
+              Obx(() {
+                final connectedDevice = controller.connectedDevice.value;
+                final foundDevices = controller.foundDevices.toList();
 
-                  final List<DiscoveredDevice> sortedList = [];
+                final List<DiscoveredDevice> sortedList = [];
 
-                  if (connectedDevice != null) {
-                    sortedList.add(connectedDevice);
-                    foundDevices.removeWhere((d) => d.id == connectedDevice.id);
-                  }
-                  sortedList.addAll(foundDevices);
+                if (connectedDevice != null) {
+                  sortedList.add(connectedDevice);
+                  foundDevices.removeWhere((d) => d.id == connectedDevice.id);
+                }
+                sortedList.addAll(foundDevices);
 
-                  // MODIFICAÇÃO: Removido o indicador de progresso central
-                  if (sortedList.isEmpty && !controller.isScanning.value) {
-                    return const Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text('Nenhum dispositivo encontrado.',
-                              style: TextStyle(color: Colors.white70)),
-                        ],
-                      ),
-                    );
-                  }
-
-                  return ListView.builder(
-                    itemCount: sortedList.length,
-                    itemBuilder: (context, index) {
-                      final device = sortedList[index];
-                      final isConnected = device.id == connectedDevice?.id;
-                      return _buildDeviceTile(device, isConnected);
-                    },
+                if (sortedList.isEmpty && !controller.isScanning.value) {
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          'Nenhum dispositivo encontrado.',
+                          style: TextStyle(color: textColor.withOpacity(0.7)),
+                        ),
+                      ],
+                    ),
                   );
-                }),
-              ),
+                }
+
+                return ListView.builder(
+                  shrinkWrap:
+                      true, // Adicionado para a lista rolar dentro do SingleChildScrollView
+                  physics:
+                      const NeverScrollableScrollPhysics(), // Desabilita a rolagem interna da lista
+                  itemCount: sortedList.length,
+                  itemBuilder: (context, index) {
+                    final device = sortedList[index];
+                    final isConnected = device.id == connectedDevice?.id;
+                    return _buildDeviceTile(device, isConnected);
+                  },
+                );
+              }),
               const SizedBox(height: 20),
               Center(
-                child: Obx(
-                  () {
-                    bool isScanning = controller.isScanning.value;
-                    return OutlinedButton.icon(
-                      onPressed: () {
-                        if (isScanning) {
-                          controller.stopScan();
-                        } else {
-                          controller.startManualScan();
-                        }
-                      },
-                      icon: isScanning
-                          ? SizedBox(
+                child: Obx(() {
+                  bool isScanning = controller.isScanning.value;
+                  return OutlinedButton.icon(
+                    onPressed: () {
+                      if (isScanning) {
+                        controller.stopScan();
+                      } else {
+                        controller.startManualScan();
+                      }
+                    },
+                    icon:
+                        isScanning
+                            ? const SizedBox(
                               width: 16,
                               height: 16,
                               child: CircularProgressIndicator(
                                 strokeWidth: 2,
-                                valueColor:
-                                    AlwaysStoppedAnimation<Color>(accentColor),
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                  Color(0xFF53A194),
+                                ),
                               ),
                             )
-                          : Icon(
+                            : const Icon(
                               Icons.search,
                               size: 20,
-                              color: accentColor,
+                              color: Color(0xFF53A194),
                             ),
-                      label: Text(
-                        isScanning ? 'Buscando...' : 'Procurar Dispositivo',
-                        style: TextStyle(
-                          color: accentColor,
-                          fontWeight: FontWeight.bold,
-                        ),
+                    label: Text(
+                      isScanning ? 'Buscando...' : 'Procurar Dispositivo',
+                      style: TextStyle(
+                        color: primaryColor,
+                        fontWeight: FontWeight.bold,
                       ),
-                      style: OutlinedButton.styleFrom(
-                        side: BorderSide(
-                          color: accentColor.withOpacity(0.5),
-                        ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 24, vertical: 12),
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      side: BorderSide(color: primaryColor.withOpacity(0.5)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
                       ),
-                    );
-                  },
-                ),
-              )
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 24,
+                        vertical: 12,
+                      ),
+                    ),
+                  );
+                }),
+              ),
             ],
           ),
         ),
@@ -162,6 +164,10 @@ class _OnboardingBlePageState extends State<OnboardingBlePage> {
   }
 
   Widget _buildDeviceTile(DiscoveredDevice device, bool connected) {
+    const Color tileBgColor = Color(0xFFE5E0D2);
+    const Color textColor = Color(0xFF524F42);
+    final Color primaryColor = const Color(0xFF53A194);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -169,16 +175,16 @@ class _OnboardingBlePageState extends State<OnboardingBlePage> {
           margin: const EdgeInsets.symmetric(vertical: 6),
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: tileColor,
+            color: tileBgColor,
             borderRadius: BorderRadius.circular(12),
             border:
-                connected ? Border.all(color: accentColor, width: 1.5) : null,
+                connected ? Border.all(color: primaryColor, width: 1.5) : null,
           ),
           child: Row(
             children: [
               Icon(
                 connected ? Icons.bluetooth_connected : Icons.bluetooth,
-                color: connected ? accentColor : Colors.white54,
+                color: connected ? primaryColor : textColor.withOpacity(0.7),
               ),
               const SizedBox(width: 16),
               Expanded(
@@ -187,9 +193,8 @@ class _OnboardingBlePageState extends State<OnboardingBlePage> {
                       ? device.name
                       : '(Dispositivo sem nome)',
                   style: TextStyle(
-                    color: Colors.white,
-                    fontWeight:
-                        connected ? FontWeight.bold : FontWeight.normal,
+                    color: textColor,
+                    fontWeight: connected ? FontWeight.bold : FontWeight.normal,
                     fontSize: 16,
                   ),
                 ),
@@ -199,31 +204,41 @@ class _OnboardingBlePageState extends State<OnboardingBlePage> {
                 const SizedBox.shrink()
               else
                 ElevatedButton(
-                  onPressed: controller.isConnecting.value
-                      ? null
-                      : () {
-                          controller.connectToDevice(device);
-                        },
+                  onPressed:
+                      controller.isConnecting.value
+                          ? null
+                          : () {
+                            controller.connectToDevice(device);
+                          },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: accentColor,
-                    foregroundColor: Colors.white,
-                    disabledBackgroundColor: accentColor.withOpacity(0.25),
+                    backgroundColor: primaryColor,
+                    foregroundColor: const Color(0xFFE5E0D2),
+                    disabledBackgroundColor: primaryColor.withOpacity(0.25),
                     shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8)),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 12, vertical: 8),
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
                   ),
-                  child: Obx(() => controller.isConnecting.value &&
-                          controller.connectedDevice.value?.id == device.id
-                      ? const SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              valueColor:
-                                  AlwaysStoppedAnimation<Color>(Colors.white)),
-                        )
-                      : const Text('Conectar')),
+                  child: Obx(
+                    () =>
+                        controller.isConnecting.value &&
+                                controller.connectedDevice.value?.id ==
+                                    device.id
+                            ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                  Colors.white,
+                                ),
+                              ),
+                            )
+                            : const Text('Conectar'),
+                  ),
                 ),
             ],
           ),
@@ -233,15 +248,18 @@ class _OnboardingBlePageState extends State<OnboardingBlePage> {
             padding: const EdgeInsets.only(left: 8.0, top: 4.0),
             child: Row(
               children: [
-                Icon(Icons.check_circle, color: accentColor, size: 14),
+                Icon(Icons.check_circle, color: primaryColor, size: 14),
                 const SizedBox(width: 6),
-                const Text(
+                Text(
                   "Conexão estabelecida.",
-                  style: TextStyle(color: Colors.white70, fontSize: 13),
+                  style: TextStyle(
+                    color: textColor.withOpacity(0.7),
+                    fontSize: 13,
+                  ),
                 ),
               ],
             ),
-          )
+          ),
       ],
     );
   }

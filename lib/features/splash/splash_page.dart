@@ -1,5 +1,3 @@
-// splash_page.dart
-
 import 'package:app_v0/features/splash/splash_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -9,46 +7,37 @@ class SplashPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Injeta o controller assim que a SplashPage é construída.
-    // O onInit() do controller será chamado automaticamente, disparando a inicialização.
     Get.put(SplashPageController());
 
-    // O resto da sua UI continua exatamente igual, pois ela já é leve e eficiente.
+    // Cor de fundo única: verde claro #90BEAB
+    const Color splashBackgroundColor = Color(0xFF90BEAB);
+
     return Scaffold(
-      body: Container(
-        alignment: Alignment.center,
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              Color(0xFF1A1A2E), // Cor primária escura
-              Color(0xFF16213E), // Cor secundária escura
-            ],
-          ),
-        ),
-        child: const Column(
+      backgroundColor: splashBackgroundColor, // Define a cor de fundo
+      body: Center(
+        child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              Icons.crib_outlined,
-              size: 80,
-              color: Colors.white,
+            // Substituindo o ícone pela logo
+            Image.asset(
+              'lib/assets/logoBranca.png',
+              height: 150, // Ajuste o tamanho da logo conforme necessário
             ),
-            SizedBox(height: 20),
-            Text(
+            const SizedBox(height: 20),
+            // Mudança na cor do texto para melhor contraste
+            const Text(
               'SafeBaby',
               style: TextStyle(
-                color: Colors.white,
+                color: Color(0xFF316557), // Cor de texto escura para contraste
                 fontSize: 32,
                 fontWeight: FontWeight.bold,
                 letterSpacing: 1.5,
               ),
             ),
-            // Opcional: Adicionar um indicador de progresso
-            SizedBox(height: 30),
-            CircularProgressIndicator(
-              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+            const SizedBox(height: 30),
+            // Mudança na cor do CircularProgressIndicator para contraste
+            const CircularProgressIndicator(
+              valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF316557)),
             ),
           ],
         ),

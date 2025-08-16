@@ -62,40 +62,52 @@ class DatabaseHelper {
     await db.insert('localizacao', {'latitude': lat, 'longitude': lon});
   }
 
-  // Método auxiliar para obter os dados mais recentes para depuração
+  // Novo método para inserir múltiplos registros de uma vez em uma transação
+  Future<void> inserirDadosSensores(
+    List<Map<String, dynamic>> acelerometro,
+    List<Map<String, dynamic>> giroscopio,
+    List<Map<String, dynamic>> localizacao,
+  ) async {
+    final db = await database;
+    await db.transaction((txn) async {
+      for (var data in acelerometro) {
+        await txn.insert('acelerometro', data);
+      }
+      for (var data in giroscopio) {
+        await txn.insert('giroscopio', data);
+      }
+      for (var data in localizacao) {
+        await txn.insert('localizacao', data);
+      }
+    });
+  }
+
   Future<Map<String, dynamic>> getLatestData() async {
     final db = await database;
 
-    // Obtém o último registro de acelerômetro
-    final accelList = await db.query('acelerometro',
-        orderBy: 'id DESC',
-        limit: 1
+    final accelList = await db.query(
+      'acelerometro',
+      orderBy: 'id DESC',
+      limit: 1,
     );
+    final gyroList = await db.query('giroscopio', orderBy: 'id DESC', limit: 1);
+    final locList = await db.query('localizacao', orderBy: 'id DESC', limit: 1);
 
-    // Obtém o último registro de giroscópio
-    final gyroList = await db.query('giroscopio',
-        orderBy: 'id DESC',
-        limit: 1
-    );
-
-    // Obtém o último registro de localização
-    final locList = await db.query('localizacao',
-        orderBy: 'id DESC',
-        limit: 1
-    );
-
-    // Conta o número total de registros
-    final accelCount = Sqflite.firstIntValue(
-        await db.rawQuery('SELECT COUNT(*) FROM acelerometro')
-    ) ?? 0;
-
-    final gyroCount = Sqflite.firstIntValue(
-        await db.rawQuery('SELECT COUNT(*) FROM giroscopio')
-    ) ?? 0;
-
-    final locCount = Sqflite.firstIntValue(
-        await db.rawQuery('SELECT COUNT(*) FROM localizacao')
-    ) ?? 0;
+    final accelCount =
+        Sqflite.firstIntValue(
+          await db.rawQuery('SELECT COUNT(*) FROM acelerometro'),
+        ) ??
+        0;
+    final gyroCount =
+        Sqflite.firstIntValue(
+          await db.rawQuery('SELECT COUNT(*) FROM giroscopio'),
+        ) ??
+        0;
+    final locCount =
+        Sqflite.firstIntValue(
+          await db.rawQuery('SELECT COUNT(*) FROM localizacao'),
+        ) ??
+        0;
 
     return {
       'ultimo_acelerometro': accelList.isNotEmpty ? accelList.first : null,
@@ -106,7 +118,10 @@ class DatabaseHelper {
       'total_localizacao': locCount,
     };
   }
-  Future<List<Map<String, dynamic>>> getDadosAcelerometro({int limite = 100}) async {
+
+  Future<List<Map<String, dynamic>>> getDadosAcelerometro({
+    int limite = 100,
+  }) async {
     final db = await database;
     return await db.query(
       'acelerometro',
@@ -114,5 +129,4 @@ class DatabaseHelper {
       limit: limite,
     );
   }
-
 }

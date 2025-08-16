@@ -15,11 +15,11 @@ class OnboardingPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final OnboardingController controller = Get.put(OnboardingController());
     final BluetoothController bleController = Get.find<BluetoothController>();
-    const Color accentColor = Color(0xFF53BF9D);
-    const Color backgroundColor = Color(0xFF1A1A2E);
+    const Color primaryColor = Color(0xFF53A194);
+    const Color secondaryColor = Color(0xFFE5E0D2);
 
     return Scaffold(
-      backgroundColor: backgroundColor,
+      backgroundColor: secondaryColor,
       body: SafeArea(
         child: Column(
           children: [
@@ -42,47 +42,59 @@ class OnboardingPage extends StatelessWidget {
             ),
             Obx(() {
               if (controller.currentPageIndex.value == 5) {
-                return const SizedBox.shrink(); 
+                return const SizedBox.shrink();
               }
               return Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 20,
+                ),
                 child: Row(
                   children: [
-                    Obx(() => Visibility(
-                          visible: controller.currentPageIndex.value > 0,
-                          maintainSize: true,
-                          maintainAnimation: true,
-                          maintainState: true,
-                          child: TextButton(
-                            onPressed: controller.previousPage,
-                            style: TextButton.styleFrom(
-                              foregroundColor: Colors.white,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 7, vertical: 12),
+                    Obx(
+                      () => Visibility(
+                        visible: controller.currentPageIndex.value > 0,
+                        maintainSize: true,
+                        maintainAnimation: true,
+                        maintainState: true,
+                        child: TextButton(
+                          onPressed: controller.previousPage,
+                          style: TextButton.styleFrom(
+                            foregroundColor: primaryColor,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
                             ),
-                            child: const Text(
-                              'Voltar',
-                              style: TextStyle(
-                                  fontSize: 16, fontWeight: FontWeight.bold),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 7,
+                              vertical: 12,
                             ),
                           ),
-                        )),
+                          child: const Text(
+                            'Voltar',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
                     const Spacer(),
-                    Obx(() => DotsIndicator(
-                          dotsCount: 6,
-                          position: controller.currentPageIndex.value.toDouble(),
-                          decorator: DotsDecorator(
-                            color: Colors.white24,
-                            activeColor: accentColor,
-                            size: const Size.square(9.0),
-                            activeSize: const Size(18.0, 9.0),
-                            activeShape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(5.0)),
+                    Obx(
+                      () => DotsIndicator(
+                        dotsCount: 6,
+                        position: controller.currentPageIndex.value.toDouble(),
+                        decorator: DotsDecorator(
+                          color: primaryColor.withOpacity(0.3),
+                          activeColor: primaryColor,
+                          size: const Size.square(9.0),
+                          activeSize: const Size(18.0, 9.0),
+                          activeShape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(5.0),
                           ),
-                        )),
+                        ),
+                      ),
+                    ),
                     const SizedBox(width: 12),
                     Obx(() {
                       bool isButtonEnabled = false;
@@ -91,14 +103,15 @@ class OnboardingPage extends StatelessWidget {
                           isButtonEnabled = true;
                           break;
                         case 1:
-                          // MODIFICAÇÃO: Agora exige as três permissões.
-                          isButtonEnabled = controller.bluetoothPermissionGranted.value &&
-                                            controller.notificationsPermissionGranted.value &&
-                                            controller.locationPermissionGranted.value &&
-                                            controller.smsPermissionGranted.value;
+                          isButtonEnabled =
+                              controller.bluetoothPermissionGranted.value &&
+                              controller.notificationsPermissionGranted.value &&
+                              controller.locationPermissionGranted.value &&
+                              controller.smsPermissionGranted.value;
                           break;
                         case 2:
-                          isButtonEnabled = bleController.isConnected.value;
+                          // isButtonEnabled = bleController.isConnected.value;
+                          isButtonEnabled = true;
                           break;
                         case 3:
                           isButtonEnabled = true;
@@ -106,31 +119,41 @@ class OnboardingPage extends StatelessWidget {
                         case 4:
                           isButtonEnabled = controller.isFormValid.value;
                           break;
-                        case 5: 
+                        case 5:
                           isButtonEnabled = true;
+                          break;
                       }
 
                       return ElevatedButton(
-                        onPressed: isButtonEnabled ? controller.validateAndProceed : null,
+                        onPressed:
+                            isButtonEnabled
+                                ? controller.validateAndProceed
+                                : null,
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: accentColor,
-                          foregroundColor: Colors.white,
-                          disabledBackgroundColor: Colors.grey.shade700,
+                          backgroundColor: primaryColor,
+                          foregroundColor: secondaryColor,
+                          disabledBackgroundColor: primaryColor.withOpacity(
+                            0.5,
+                          ),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 10, vertical: 10),
+                            horizontal: 10,
+                            vertical: 10,
+                          ),
                         ),
                         child: Text(
                           controller.currentPageIndex.value == 4
                               ? 'Concluir'
                               : 'Próximo',
                           style: const TextStyle(
-                              fontSize: 16, fontWeight: FontWeight.bold),
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       );
-                    })
+                    }),
                   ],
                 ),
               );
@@ -147,35 +170,31 @@ class _OnboardingWelcomeStep extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Padding(
-      padding: EdgeInsets.all(24.0),
+    const Color textColor = Color(0xFF524F42);
+    const Color primaryColor = Color(0xFF53A194);
+
+    return Padding(
+      padding: const EdgeInsets.all(24.0),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Icon(
-            Icons.crib_outlined,
-            size: 100,
-            color: Color(0xFF53BF9D),
-          ),
-          SizedBox(height: 30),
-          Text(
+          Image.asset('lib/assets/logoBranca.png', height: 150),
+          const SizedBox(height: 0),
+          const Text(
             'Bem-vindo(a) ao SafeBaby!',
             textAlign: TextAlign.center,
             style: TextStyle(
-              color: Colors.white,
+              color: textColor,
               fontSize: 26,
               fontWeight: FontWeight.bold,
             ),
           ),
-          SizedBox(height: 15),
-          Text(
+          const SizedBox(height: 15),
+          const Text(
             'Seu assistente inteligente para o monitoramento e segurança do seu bebê.',
             textAlign: TextAlign.center,
-            style: TextStyle(
-              color: Colors.white70,
-              fontSize: 16,
-            ),
+            style: TextStyle(color: textColor, fontSize: 16),
           ),
         ],
       ),
@@ -190,6 +209,9 @@ class _OnboardingPermissionsStep extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    const Color textColor = Color(0xFF524F42);
+    const Color primaryColor = Color(0xFF53A194);
+
     return Padding(
       padding: const EdgeInsets.all(24.0),
       child: Column(
@@ -199,52 +221,56 @@ class _OnboardingPermissionsStep extends StatelessWidget {
           const Text(
             'Permissões Necessárias',
             style: TextStyle(
-              color: Colors.white,
+              color: textColor,
               fontSize: 26,
               fontWeight: FontWeight.bold,
             ),
           ),
-          const SizedBox(height: 15),
-          const Text(
-            'Para funcionar corretamente, o SafeBaby precisa de algumas permissões.',
-            style: TextStyle(
-              color: Colors.white70,
-              fontSize: 16,
+          const SizedBox(height: 30),
+          Obx(
+            () => _PermissionRequestTile(
+              icon: Icons.bluetooth,
+              title: 'Bluetooth',
+              subtitle: 'Para conectar ao dispositivo de monitoramento.',
+              isGranted: controller.bluetoothPermissionGranted.value,
+              onPressed: controller.requestBluetoothPermission,
+              primaryColor: primaryColor,
+              textColor: textColor,
             ),
           ),
-          const SizedBox(height: 20),
-          Obx(() => _PermissionRequestTile(
-                icon: Icons.bluetooth,
-                title: 'Bluetooth',
-                subtitle: 'Para conectar ao dispositivo de monitoramento.',
-                isGranted: controller.bluetoothPermissionGranted.value,
-                onPressed: controller.requestBluetoothPermission,
-              )),
-          const SizedBox(height: 20),
-          Obx(() => _PermissionRequestTile(
-                icon: Icons.notifications,
-                title: 'Notificações',
-                subtitle: 'Para enviar alertas importantes sobre seu bebê.',
-                isGranted: controller.notificationsPermissionGranted.value,
-                onPressed: controller.requestNotificationsPermission,
-              )),
-          const SizedBox(height: 20),
-          // MODIFICAÇÃO: Tile para a permissão de localização.
-          Obx(() => _PermissionRequestTile(
-                icon: Icons.location_on_outlined,
-                title: 'Localização',
-                subtitle: 'Para registrar onde os eventos ocorrem.',
-                isGranted: controller.locationPermissionGranted.value,
-                onPressed: controller.requestLocationPermission,
-              )),
-          const SizedBox(height: 12),
-          Obx(() => _PermissionRequestTile(
-            icon: Icons.sms,
-            title: 'SMS',
-            subtitle: 'Para enviar alertas de emergência para seu contato.',
-            isGranted: controller.smsPermissionGranted.value,
-            onPressed: controller.requestSmsPermission, 
-          )),
+          Obx(
+            () => _PermissionRequestTile(
+              icon: Icons.notifications,
+              title: 'Notificações',
+              subtitle: 'Para enviar alertas importantes sobre seu bebê.',
+              isGranted: controller.notificationsPermissionGranted.value,
+              onPressed: controller.requestNotificationsPermission,
+              primaryColor: primaryColor,
+              textColor: textColor,
+            ),
+          ),
+          Obx(
+            () => _PermissionRequestTile(
+              icon: Icons.location_on_outlined,
+              title: 'Localização',
+              subtitle: 'Para registrar onde os eventos ocorrem.',
+              isGranted: controller.locationPermissionGranted.value,
+              onPressed: controller.requestLocationPermission,
+              primaryColor: primaryColor,
+              textColor: textColor,
+            ),
+          ),
+          Obx(
+            () => _PermissionRequestTile(
+              icon: Icons.sms,
+              title: 'SMS',
+              subtitle: 'Para enviar alertas de emergência para seu contato.',
+              isGranted: controller.smsPermissionGranted.value,
+              onPressed: controller.requestSmsPermission,
+              primaryColor: primaryColor,
+              textColor: textColor,
+            ),
+          ),
         ],
       ),
     );
@@ -257,6 +283,8 @@ class _PermissionRequestTile extends StatelessWidget {
   final String subtitle;
   final bool isGranted;
   final VoidCallback onPressed;
+  final Color primaryColor;
+  final Color textColor;
 
   const _PermissionRequestTile({
     required this.icon,
@@ -264,31 +292,43 @@ class _PermissionRequestTile extends StatelessWidget {
     required this.subtitle,
     required this.isGranted,
     required this.onPressed,
+    required this.primaryColor,
+    required this.textColor,
   });
 
   @override
   Widget build(BuildContext context) {
     return ListTile(
-      contentPadding: const EdgeInsets.all(0),
-      leading: Icon(icon, color: const Color(0xFF53BF9D), size: 30),
-      title: Text(title,
-          style: const TextStyle(
-              color: Colors.white, fontWeight: FontWeight.bold)),
-      subtitle:
-          Text(subtitle, style: const TextStyle(color: Colors.white70)),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 0, vertical: 4),
+      leading: Icon(icon, color: primaryColor, size: 24),
+      title: Text(
+        title,
+        style: TextStyle(
+          color: textColor,
+          fontWeight: FontWeight.bold,
+          fontSize: 15,
+        ),
+      ),
+      subtitle: Text(
+        subtitle,
+        style: TextStyle(color: textColor.withOpacity(0.7), fontSize: 12),
+      ),
       trailing: TextButton(
         onPressed: isGranted ? null : onPressed,
         style: TextButton.styleFrom(
           backgroundColor:
-              isGranted ? Colors.green.withOpacity(0.2) : Colors.white10,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
-          ),
+              isGranted
+                  ? primaryColor.withOpacity(0.2)
+                  : primaryColor.withOpacity(0.1),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
         ),
         child: Text(
           isGranted ? 'Permitido' : 'Permitir',
           style: TextStyle(
-              color: isGranted ? const Color(0xFF53BF9D) : Colors.white),
+            color: isGranted ? primaryColor : primaryColor,
+            fontSize: 12,
+          ),
         ),
       ),
     );

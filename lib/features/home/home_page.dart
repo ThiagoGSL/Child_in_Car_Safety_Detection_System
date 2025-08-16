@@ -17,12 +17,18 @@ class HomePage extends StatelessWidget {
     final BluetoothController bleController = Get.find<BluetoothController>();
     final PhotoController photoController = Get.find<PhotoController>();
     final FormController formController = Get.find<FormController>();
-    final MainPageController mainPageController = Get.find<MainPageController>();
-    final StateMachineController stateMachineController = Get.find<StateMachineController>();
-    final Color accentColor = const Color(0xFF53BF9D);
+    final MainPageController mainPageController =
+        Get.find<MainPageController>();
+    final StateMachineController stateMachineController =
+        Get.find<StateMachineController>();
+
+    // Novas cores da identidade visual
+    const Color primaryColor = Color(0xFF53A194);
+    const Color secondaryColor = Color(0xFFE5E0D2);
+    const Color textColor = Color(0xFF524F42);
 
     return Scaffold(
-      backgroundColor: const Color(0xFF1A1A2E),
+      backgroundColor: secondaryColor,
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -39,20 +45,21 @@ class HomePage extends StatelessWidget {
                       const Text(
                         'Monitorando',
                         style: TextStyle(
-                          color: Colors.white,
+                          color: textColor,
                           fontSize: 22,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
                       AutoSizeText(
                         childName,
-                        maxLines: 1, 
+                        maxLines: 1,
                         style: TextStyle(
-                          color: accentColor,
-                          fontSize: 24, 
+                          color:
+                              primaryColor, // Use a cor primária para o nome da criança
+                          fontSize: 24,
                           fontWeight: FontWeight.bold,
                         ),
-                        minFontSize: 12, 
+                        minFontSize: 12,
                       ),
                     ],
                   );
@@ -60,7 +67,7 @@ class HomePage extends StatelessWidget {
                   return const Text(
                     'Status do Monitor',
                     style: TextStyle(
-                      color: Colors.white,
+                      color: textColor,
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
                     ),
@@ -74,32 +81,39 @@ class HomePage extends StatelessWidget {
                   text: TextSpan(
                     style: const TextStyle(fontWeight: FontWeight.bold),
                     children: [
-                      const TextSpan(
+                      TextSpan(
                         text: 'Estado Atual: ',
-                        style: TextStyle(color: Colors.white, fontSize: 16),
+                        style: TextStyle(color: textColor, fontSize: 16),
                       ),
                       TextSpan(
-                        text: stateMachineController.currentStateToString(currentState),
-                        style: TextStyle(color: accentColor, fontSize: 16),
+                        text: stateMachineController.currentStateToString(
+                          currentState,
+                        ),
+                        style: TextStyle(color: primaryColor, fontSize: 16),
                       ),
                     ],
                   ),
                 );
               }),
               const SizedBox(height: 10),
-              const Text(
+              Text(
                 'Acompanhe em tempo real os eventos do dispositivo.',
-                style: TextStyle(color: Colors.white70, fontSize: 16),
+                style: TextStyle(
+                  color: textColor.withOpacity(0.7),
+                  fontSize: 16,
+                ),
               ),
               const SizedBox(height: 10),
               Obx(() {
                 bool isConnected = bleController.isConnected.value;
                 bool isChildDetected = photoController.criancaDetectada.value;
-                bool isPhotoReceived = bleController.receivedImage.value != null;
+                bool isPhotoReceived =
+                    bleController.receivedImage.value != null;
 
                 bool isConnectingStepActive = !isConnected;
                 bool isDetectingStepActive = isConnected && !isChildDetected;
-                bool isNotifyingStepActive = isChildDetected && !isPhotoReceived;
+                bool isNotifyingStepActive =
+                    isChildDetected && !isPhotoReceived;
 
                 return Column(
                   children: [
@@ -110,9 +124,8 @@ class HomePage extends StatelessWidget {
                       isActive: isConnectingStepActive,
                       eventCard: GestureDetector(
                         onTap: () {
-                          // MODIFICAÇÃO: Removida a condição. Sempre navega para a ble_page.
-                          mainPageController.onItemTapped(2); // Muda para a aba de Configurações
-                          mainPageController.navigateToBlePage(true); // Mostra a BlePage
+                          mainPageController.onItemTapped(2);
+                          mainPageController.navigateToBlePage(true);
                         },
                         child: PulsingCard(
                           isPulsing: isConnectingStepActive,
@@ -120,9 +133,15 @@ class HomePage extends StatelessWidget {
                             constraints: const BoxConstraints(minHeight: 48),
                             alignment: Alignment.center,
                             child: Text(
-                              isConnected ? 'CONECTADO' : 'PROCURANDO DISPOSITIVO...',
+                              isConnected
+                                  ? 'CONECTADO'
+                                  : 'PROCURANDO DISPOSITIVO...',
                               textAlign: TextAlign.center,
-                              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13.5),
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 13.5,
+                              ),
                             ),
                           ),
                         ),
@@ -133,11 +152,10 @@ class HomePage extends StatelessWidget {
                       isLast: false,
                       isPast: isPhotoReceived,
                       isActive: isNotifyingStepActive,
-                      // MODIFICAÇÃO: Adicionado GestureDetector para navegar para a galeria
                       eventCard: GestureDetector(
                         onTap: () {
-                          mainPageController.onItemTapped(2); // Muda para a aba de Configurações
-                          mainPageController.navigateToPhotoPage(true); // Mostra a PhotoPage
+                          mainPageController.onItemTapped(2);
+                          mainPageController.navigateToPhotoPage(true);
                         },
                         child: PulsingCard(
                           isPulsing: isNotifyingStepActive,
@@ -145,9 +163,15 @@ class HomePage extends StatelessWidget {
                             constraints: const BoxConstraints(minHeight: 48),
                             alignment: Alignment.center,
                             child: Text(
-                              isPhotoReceived ? 'FOTO RECEBIDA' : 'AGUARDANDO FOTO',
+                              isPhotoReceived
+                                  ? 'FOTO RECEBIDA'
+                                  : 'AGUARDANDO FOTO',
                               textAlign: TextAlign.center,
-                              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13.5),
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 13.5,
+                              ),
                             ),
                           ),
                         ),
@@ -160,8 +184,8 @@ class HomePage extends StatelessWidget {
                       isActive: isDetectingStepActive,
                       eventCard: GestureDetector(
                         onTap: () {
-                          mainPageController.onItemTapped(2); // Muda para a aba de Configurações
-                          mainPageController.navigateToPhotoPage(true); // Mostra a PhotoPage
+                          mainPageController.onItemTapped(2);
+                          mainPageController.navigateToPhotoPage(true);
                         },
                         child: PulsingCard(
                           isPulsing: isDetectingStepActive,
@@ -169,15 +193,21 @@ class HomePage extends StatelessWidget {
                             constraints: const BoxConstraints(minHeight: 48),
                             alignment: Alignment.center,
                             child: Text(
-                              isChildDetected ? 'BEBÊ DETECTADO' : 'NENHUM BEBÊ DETECTADO',
+                              isChildDetected
+                                  ? 'BEBÊ DETECTADO'
+                                  : 'NENHUM BEBÊ DETECTADO',
                               textAlign: TextAlign.center,
-                              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13.5),
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 13.5,
+                              ),
+                            ),
                           ),
                         ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
                 );
               }),
               const Spacer(),
@@ -193,11 +223,11 @@ class HomePage extends StatelessWidget {
             mainPageController.onItemTapped(2);
             mainPageController.navigateToPhotoPage(true);
           },
-          backgroundColor: accentColor,
+          backgroundColor: primaryColor, // Cor do botão para verde
           tooltip: 'Ver Galeria',
           child: const Icon(
             Icons.photo_camera_outlined,
-            color: Colors.white,
+            color: Colors.white, // Ícone branco para contraste
           ),
         ),
       ),

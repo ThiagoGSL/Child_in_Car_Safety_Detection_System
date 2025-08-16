@@ -8,12 +8,19 @@ class OnboardingFormPage extends StatelessWidget {
   final GlobalKey<FormState> formKey;
 
   final FormController c = Get.find<FormController>();
-  final OnboardingController onboardingController = Get.find<OnboardingController>();
+  final OnboardingController onboardingController =
+      Get.find<OnboardingController>();
 
   OnboardingFormPage({super.key, required this.formKey});
 
-  final _phoneMask = MaskTextInputFormatter(mask: '(##) #####-####', filter: {"#": RegExp(r'[0-9]')});
-  final _emergencyPhoneMask = MaskTextInputFormatter(mask: '(##) #####-####', filter: {"#": RegExp(r'[0-9]')});
+  final _phoneMask = MaskTextInputFormatter(
+    mask: '(##) #####-####',
+    filter: {"#": RegExp(r'[0-9]')},
+  );
+  final _emergencyPhoneMask = MaskTextInputFormatter(
+    mask: '(##) #####-####',
+    filter: {"#": RegExp(r'[0-9]')},
+  );
 
   Widget _buildTextField({
     required String label,
@@ -25,10 +32,11 @@ class OnboardingFormPage extends StatelessWidget {
     TextInputAction textInputAction = TextInputAction.next,
     IconData? prefixIcon,
   }) {
-    const themeColor = Color(0xFF53BF9D);
+    const themeColor = Color(0xFF53A194);
+    const textColor = Color(0xFF524F42);
     final inputBorder = OutlineInputBorder(
       borderRadius: BorderRadius.circular(12),
-      borderSide: BorderSide(color: Colors.white.withOpacity(0.2)),
+      borderSide: BorderSide(color: textColor.withOpacity(0.2)),
     );
 
     return Padding(
@@ -36,28 +44,34 @@ class OnboardingFormPage extends StatelessWidget {
       child: TextFormField(
         initialValue: initialValue,
         cursorColor: themeColor,
-        style: const TextStyle(color: Colors.white, fontSize: 14),
+        style: const TextStyle(color: textColor, fontSize: 14),
         decoration: InputDecoration(
-          contentPadding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+          contentPadding: const EdgeInsets.symmetric(
+            vertical: 14,
+            horizontal: 16,
+          ),
           labelText: label,
-          labelStyle: const TextStyle(color: Colors.white54),
+          labelStyle: TextStyle(color: textColor.withOpacity(0.5)),
           floatingLabelStyle: const TextStyle(color: themeColor),
-          prefixIcon: prefixIcon != null ? Icon(prefixIcon, color: Colors.white54) : null,
+          prefixIcon:
+              prefixIcon != null ? Icon(prefixIcon, color: themeColor) : null,
           border: inputBorder,
           enabledBorder: inputBorder,
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
             borderSide: const BorderSide(color: themeColor, width: 2),
           ),
-          errorBorder: inputBorder.copyWith(borderSide: const BorderSide(color: Colors.red, width: 2)),
-          focusedErrorBorder: inputBorder.copyWith(borderSide: const BorderSide(color: Colors.red, width: 2)),
+          errorBorder: inputBorder.copyWith(
+            borderSide: const BorderSide(color: Colors.red, width: 2),
+          ),
+          focusedErrorBorder: inputBorder.copyWith(
+            borderSide: const BorderSide(color: Colors.red, width: 2),
+          ),
         ),
         keyboardType: keyboardType,
         validator: validator,
         onChanged: (v) {
           onChanged(v);
-          // MODIFICAÇÃO: A chamada c.saveData() foi removida daqui.
-          // A validação continua para habilitar/desabilitar o botão Concluir em tempo real.
           onboardingController.checkFormValidity();
         },
         inputFormatters: inputFormatters,
@@ -68,6 +82,9 @@ class OnboardingFormPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    const textColor = Color(0xFF524F42);
+    const primaryColor = Color(0xFF53A194);
+
     return GestureDetector(
       onTap: () {
         FocusScope.of(context).unfocus();
@@ -80,19 +97,22 @@ class OnboardingFormPage extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // Adiciona um SizedBox para empurrar o conteúdo para baixo
+              const SizedBox(height: 50),
+
               const Text(
                 'Dados Importantes',
                 style: TextStyle(
-                  color: Colors.white,
+                  color: textColor,
                   fontSize: 26,
                   fontWeight: FontWeight.bold,
                 ),
               ),
               const SizedBox(height: 15),
-              const Text(
+              Text(
                 'Com esses dados, o SafeBaby saberá como te chamar e quem contatar em uma emergência.',
                 style: TextStyle(
-                  color: Colors.white70,
+                  color: textColor.withOpacity(0.7),
                   fontSize: 16,
                 ),
               ),
@@ -102,14 +122,16 @@ class OnboardingFormPage extends StatelessWidget {
                 label: 'Seu Nome',
                 initialValue: c.userName.value,
                 onChanged: (v) => c.userName.value = v,
-                validator: (v) => (v == null || v.isEmpty) ? 'Obrigatório' : null,
+                validator:
+                    (v) => (v == null || v.isEmpty) ? 'Obrigatório' : null,
                 prefixIcon: Icons.person_outline,
               ),
               _buildTextField(
                 label: 'Nome da Criança',
                 initialValue: c.childName.value,
                 onChanged: (v) => c.childName.value = v,
-                validator: (v) => (v == null || v.isEmpty) ? 'Obrigatório' : null,
+                validator:
+                    (v) => (v == null || v.isEmpty) ? 'Obrigatório' : null,
                 prefixIcon: Icons.child_care_outlined,
               ),
               _buildTextField(
@@ -117,7 +139,11 @@ class OnboardingFormPage extends StatelessWidget {
                 initialValue: c.email.value,
                 onChanged: (v) => c.email.value = v,
                 keyboardType: TextInputType.emailAddress,
-                validator: (v) => (v != null && GetUtils.isEmail(v)) ? null : 'E-mail inválido',
+                validator:
+                    (v) =>
+                        (v != null && GetUtils.isEmail(v))
+                            ? null
+                            : 'E-mail inválido',
                 prefixIcon: Icons.email_outlined,
               ),
               _buildTextField(
@@ -126,14 +152,19 @@ class OnboardingFormPage extends StatelessWidget {
                 onChanged: (v) => c.phone.value = v,
                 keyboardType: TextInputType.phone,
                 inputFormatters: [_phoneMask],
-                validator: (v) => (v != null && v.length >= 15) ? null : 'Telefone inválido',
+                validator:
+                    (v) =>
+                        (v != null && v.length >= 15)
+                            ? null
+                            : 'Telefone inválido',
                 prefixIcon: Icons.phone_outlined,
               ),
               _buildTextField(
                 label: 'Contato de Emergência',
                 initialValue: c.emergencyName.value,
                 onChanged: (v) => c.emergencyName.value = v,
-                validator: (v) => (v == null || v.isEmpty) ? 'Obrigatório' : null,
+                validator:
+                    (v) => (v == null || v.isEmpty) ? 'Obrigatório' : null,
                 prefixIcon: Icons.contact_emergency_outlined,
               ),
               _buildTextField(
@@ -142,7 +173,11 @@ class OnboardingFormPage extends StatelessWidget {
                 onChanged: (v) => c.emergencyPhone.value = v,
                 keyboardType: TextInputType.phone,
                 inputFormatters: [_emergencyPhoneMask],
-                validator: (v) => (v != null && v.length >= 15) ? null : 'Telefone inválido',
+                validator:
+                    (v) =>
+                        (v != null && v.length >= 15)
+                            ? null
+                            : 'Telefone inválido',
                 prefixIcon: Icons.phone_in_talk_outlined,
                 textInputAction: TextInputAction.done,
               ),

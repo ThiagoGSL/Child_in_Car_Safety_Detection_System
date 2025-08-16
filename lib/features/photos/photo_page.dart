@@ -9,16 +9,18 @@ class PhotoPage extends StatelessWidget {
   final PhotoController photoController = Get.find<PhotoController>();
   final BluetoothController bleController = Get.find<BluetoothController>();
 
-  final Color accentColor = const Color(0xFF53BF9D);
-  final Color backgroundColor = const Color(0xFF1A1A2E);
-  final Color dialogColor = const Color(0xFF16213E);
+  // Novas cores da identidade visual
+  final Color primaryColor = const Color(0xFF53A194);
+  final Color secondaryColor = const Color(0xFFE5E0D2);
+  final Color textColor = const Color(0xFF524F42);
+  final Color cardColor = const Color(0xFFF0EAE1);
 
   PhotoPage({super.key});
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: backgroundColor,
+      backgroundColor: secondaryColor,
       body: Obx(() {
         final photoFile = photoController.lastPhoto.value;
 
@@ -37,30 +39,46 @@ class PhotoPage extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           const Spacer(flex: 2),
-          const Icon(Icons.photo_library_outlined, size: 80, color: Colors.white38),
+          Icon(
+            Icons.photo_library_outlined,
+            size: 80,
+            color: textColor.withOpacity(0.3),
+          ),
           const SizedBox(height: 12),
-          const Text('Galeria Vazia', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white)),
+          Text(
+            'Galeria Vazia',
+            style: TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.bold,
+              color: textColor,
+            ),
+          ),
           const SizedBox(height: 8),
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 40.0),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 40.0),
             child: Text(
               'Use o botão abaixo para tirar sua primeira foto.',
               textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 16, color: Colors.white54),
+              style: TextStyle(fontSize: 16, color: textColor.withOpacity(0.5)),
             ),
           ),
           const SizedBox(height: 50),
           OutlinedButton.icon(
             onPressed: () => bleController.requestPhoto(),
-            icon: Icon(Icons.camera_alt_outlined, color: accentColor),
+            icon: Icon(Icons.camera_alt_outlined, color: primaryColor),
             label: Text(
               'Tirar Foto',
-              style: TextStyle(color: accentColor, fontWeight: FontWeight.bold),
+              style: TextStyle(
+                color: primaryColor,
+                fontWeight: FontWeight.bold,
+              ),
             ),
             style: OutlinedButton.styleFrom(
-              side: BorderSide(color: accentColor, width: 2),
+              side: BorderSide(color: primaryColor, width: 2),
               padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
             ),
           ),
           const Spacer(flex: 2),
@@ -71,7 +89,9 @@ class PhotoPage extends StatelessWidget {
 
   Widget _buildPhotoDisplay(File photoFile) {
     final fileStat = photoFile.statSync();
-    final formattedDate = DateFormat('dd/MM/yyyy \'às\' HH:mm').format(fileStat.modified);
+    final formattedDate = DateFormat(
+      'dd/MM/yyyy \'às\' HH:mm',
+    ).format(fileStat.modified);
 
     return SafeArea(
       child: Padding(
@@ -92,16 +112,27 @@ class PhotoPage extends StatelessWidget {
                         children: [
                           Text(
                             'Última Captura',
-                            style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: accentColor),
+                            style: TextStyle(
+                              fontSize: 22,
+                              fontWeight: FontWeight.bold,
+                              color: primaryColor,
+                            ),
                           ),
                           const SizedBox(height: 4),
                           Row(
                             children: [
-                              Icon(Icons.check_circle, color: accentColor, size: 16),
+                              Icon(
+                                Icons.check_circle,
+                                color: primaryColor,
+                                size: 16,
+                              ),
                               const SizedBox(width: 8),
                               Text(
                                 'Recebida em: $formattedDate',
-                                style: const TextStyle(fontSize: 15, color: Colors.white60),
+                                style: TextStyle(
+                                  fontSize: 15,
+                                  color: textColor.withOpacity(0.7),
+                                ),
                               ),
                             ],
                           ),
@@ -115,10 +146,13 @@ class PhotoPage extends StatelessWidget {
                       child: Container(
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(16.0),
-                          border: Border.all(color: Colors.white.withOpacity(0.1), width: 1.5),
+                          border: Border.all(
+                            color: textColor.withOpacity(0.1),
+                            width: 1.5,
+                          ),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withOpacity(0.4),
+                              color: textColor.withOpacity(0.1),
                               spreadRadius: 2,
                               blurRadius: 15,
                               offset: const Offset(0, 5),
@@ -178,7 +212,7 @@ class PhotoPage extends StatelessWidget {
         key: const ValueKey('processing'),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         decoration: BoxDecoration(
-          color: dialogColor.withOpacity(0.5),
+          color: cardColor,
           borderRadius: BorderRadius.circular(12),
         ),
         child: const Row(
@@ -187,10 +221,16 @@ class PhotoPage extends StatelessWidget {
             SizedBox(
               width: 20,
               height: 20,
-              child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white70),
+              child: CircularProgressIndicator(
+                strokeWidth: 2.5,
+                color: Color(0xFF53A194),
+              ),
             ),
             SizedBox(width: 12),
-            Text("Analisando imagem...", style: TextStyle(color: Colors.white70, fontSize: 16)),
+            Text(
+              "Analisando imagem...",
+              style: TextStyle(color: Color(0xFF524F42), fontSize: 16),
+            ),
           ],
         ),
       );
@@ -200,15 +240,15 @@ class PhotoPage extends StatelessWidget {
       return const SizedBox(key: ValueKey('empty'));
     }
 
-    // --- MUDANÇA: AGORA EXIBE A MENSAGEM DE ERRO REAL ---
     if (result.containsKey('error')) {
-      final errorMsg = result['error']?.toString() ?? "Ocorreu um erro desconhecido.";
+      final errorMsg =
+          result['error']?.toString() ?? "Ocorreu um erro desconhecido.";
       return _buildInfoCard(
         key: const ValueKey('error'),
         icon: Icons.warning_amber_rounded,
         color: Colors.redAccent,
         title: "Falha na Análise",
-        subtitle: errorMsg, // Exibe a mensagem de erro específica
+        subtitle: errorMsg,
       );
     }
 
@@ -220,7 +260,7 @@ class PhotoPage extends StatelessWidget {
       return _buildInfoCard(
         key: const ValueKey('child_detected'),
         icon: Icons.check_circle_outline,
-        color: accentColor,
+        color: primaryColor,
         title: "Criança Detectada",
         subtitle: "Confiança: ${confidence.toStringAsFixed(1)}%",
       );
@@ -246,7 +286,7 @@ class PhotoPage extends StatelessWidget {
       key: key,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: dialogColor,
+        color: cardColor,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: color.withOpacity(0.7), width: 1.5),
         boxShadow: [
@@ -265,9 +305,22 @@ class PhotoPage extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title, style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+                Text(
+                  title,
+                  style: TextStyle(
+                    color: textColor,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
                 const SizedBox(height: 2),
-                Text(subtitle, style: const TextStyle(color: Colors.white70, fontSize: 14)),
+                Text(
+                  subtitle,
+                  style: TextStyle(
+                    color: textColor.withOpacity(0.7),
+                    fontSize: 14,
+                  ),
+                ),
               ],
             ),
           ),
@@ -284,13 +337,13 @@ class PhotoPage extends StatelessWidget {
           onPressed: () => photoController.shareLastPhoto(),
           icon: Icons.share,
           label: 'Compartilhar',
-          color: accentColor,
+          color: primaryColor,
         ),
         _buildActionColumn(
           onPressed: () => bleController.requestPhoto(),
           icon: Icons.camera_alt_outlined,
           label: 'Tirar Foto',
-          color: accentColor,
+          color: primaryColor,
         ),
         _buildActionColumn(
           onPressed: () => _showDeleteDialog(),
@@ -342,21 +395,30 @@ class PhotoPage extends StatelessWidget {
   void _showDeleteDialog() {
     Get.dialog(
       AlertDialog(
-        backgroundColor: dialogColor,
+        backgroundColor: cardColor,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        title: const Text('Excluir Foto', style: TextStyle(color: Colors.white)),
-        content: const Text('Tem certeza que deseja excluir esta foto?', style: TextStyle(color: Colors.white70)),
+        title: Text('Excluir Foto', style: TextStyle(color: textColor)),
+        content: Text(
+          'Tem certeza que deseja excluir esta foto?',
+          style: TextStyle(color: textColor.withOpacity(0.7)),
+        ),
         actions: [
           TextButton(
             onPressed: () => Get.back(),
-            child: const Text('Cancelar', style: TextStyle(color: Colors.white70)),
+            child: Text(
+              'Cancelar',
+              style: TextStyle(color: textColor.withOpacity(0.7)),
+            ),
           ),
           TextButton(
             onPressed: () {
               photoController.deleteLastPhoto();
               Get.back();
             },
-            child: const Text('Excluir', style: TextStyle(color: Colors.redAccent)),
+            child: const Text(
+              'Excluir',
+              style: TextStyle(color: Colors.redAccent),
+            ),
           ),
         ],
       ),

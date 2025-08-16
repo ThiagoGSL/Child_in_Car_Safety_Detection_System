@@ -22,11 +22,16 @@ class BluetoothController extends GetxController {
   var isConnecting = false.obs;
   var connectedDeviceName = ''.obs;
   var foundDevices = <DiscoveredDevice>[].obs;
-  
+
   var connectedDevice = Rx<DiscoveredDevice?>(null);
-  var isRequestingPhoto = false.obs; 
+  var isRequestingPhoto = false.obs;
   var receivedImage = Rx<Uint8List?>(null);
   var childDetected = false.obs;
+
+  final Color primaryColor = const Color(0xFF53A194);
+  final Color secondaryColor = const Color(0xFFE5E0D2);
+  final Color textColor = const Color(0xFF524F42);
+  final Color tileBackgroundColor = const Color(0xFF524F42).withOpacity(0.1);
 
   StreamSubscription<DiscoveredDevice>? _scanSub;
   StreamSubscription<ConnectionStateUpdate>? _connSub;
@@ -39,7 +44,7 @@ class BluetoothController extends GetxController {
   bool _decodingInProgress = false;
 
   late final PhotoController _photoController;
-  late final NotificationController _notificationController; 
+  late final NotificationController _notificationController;
 
   DateTime? _receptionStartTime;
 
@@ -74,20 +79,21 @@ class BluetoothController extends GetxController {
         //    icon: const Icon(Icons.check_circle_outline, color: Color(0xFF53BF9D)),
         //    duration: const Duration(seconds: 3),);
       }
-   }
-    )
-    ;
+    });
 
-    print("BluetoothController: Configuração concluída. Aguardando status do BLE.");
+    print(
+      "BluetoothController: Configuração concluída. Aguardando status do BLE.",
+    );
   }
 
   Future<bool> _checkPermissions() async {
-    var statuses = await [
-      Permission.locationWhenInUse,
-      Permission.bluetoothScan,
-      Permission.bluetoothConnect,
-      Permission.bluetoothAdvertise,
-    ].request();
+    var statuses =
+        await [
+          Permission.locationWhenInUse,
+          Permission.bluetoothScan,
+          Permission.bluetoothConnect,
+          Permission.bluetoothAdvertise,
+        ].request();
     return statuses.values.every((s) => s.isGranted);
   }
 
@@ -100,19 +106,26 @@ class BluetoothController extends GetxController {
 
     print('🏁 Iniciando varredura automática pelo Service UUID: $serviceUuid');
     isScanning.value = true;
-    
+
     _scanSub?.cancel();
-    _scanSub = flutterReactiveBle.scanForDevices(
-      withServices: [serviceUuid],
-      scanMode: ScanMode.lowLatency,
-    ).listen((device) {
-      print('✅ Dispositivo com o serviço correto encontrado! (${device.name}, ${device.id})');
-      stopScan();
-      connectToDevice(device);
-    }, onError: (e) {
-      print('Erro na varredura automática: $e');
-      isScanning.value = false;
-    });
+    _scanSub = flutterReactiveBle
+        .scanForDevices(
+          withServices: [serviceUuid],
+          scanMode: ScanMode.lowLatency,
+        )
+        .listen(
+          (device) {
+            print(
+              '✅ Dispositivo com o serviço correto encontrado! (${device.name}, ${device.id})',
+            );
+            stopScan();
+            connectToDevice(device);
+          },
+          onError: (e) {
+            print('Erro na varredura automática: $e');
+            isScanning.value = false;
+          },
+        );
   }
 
   void startManualScan() async {
@@ -127,16 +140,20 @@ class BluetoothController extends GetxController {
     isScanning.value = true;
 
     _scanSub?.cancel();
-    _scanSub = flutterReactiveBle.scanForDevices(
-        withServices: [], scanMode: ScanMode.lowLatency)
-        .listen((device) {
-      if (device.name.isNotEmpty && !foundDevices.any((d) => d.id == device.id)) {
-        foundDevices.add(device);
-      }
-    }, onError: (e) {
-      print('Erro na varredura manual: $e');
-      isScanning.value = false;
-    });
+    _scanSub = flutterReactiveBle
+        .scanForDevices(withServices: [], scanMode: ScanMode.lowLatency)
+        .listen(
+          (device) {
+            if (device.name.isNotEmpty &&
+                !foundDevices.any((d) => d.id == device.id)) {
+              foundDevices.add(device);
+            }
+          },
+          onError: (e) {
+            print('Erro na varredura manual: $e');
+            isScanning.value = false;
+          },
+        );
 
     // MODIFICAÇÃO: Removido o Future.delayed que parava a busca.
   }
@@ -153,64 +170,77 @@ class BluetoothController extends GetxController {
 
     stopScan();
     isConnecting.value = true;
-    connectedDeviceName.value = device.name.isNotEmpty ? device.name : device.id;
+    connectedDeviceName.value =
+        device.name.isNotEmpty ? device.name : device.id;
 
     _connSub?.cancel();
-    _connSub = flutterReactiveBle.connectToDevice(
-      id: device.id,
-      servicesWithCharacteristicsToDiscover: {
-        serviceUuid: [photoCharUuid, childCharUuid, commandCharUuid]
-      },
-      connectionTimeout: const Duration(seconds: 15),
-    ).listen((state) async {
-      if (state.connectionState == DeviceConnectionState.connected) {
-        print('🔗 Conectado ao ${device.name}');
-        
-        connectedDevice.value = device; 
-        
-        try {
-          final mtu = await flutterReactiveBle.requestMtu(
-              deviceId: device.id, mtu: 247);
-          print('MTU negociado: $mtu');
-          await flutterReactiveBle.requestConnectionPriority(
-              deviceId: device.id, priority: ConnectionPriority.highPerformance);
-          print('Solicitada prioridade de conexão alta.');
-        } catch (e) {
-          print('Erro ao solicitar MTU ou prioridade: $e');
-        }
+    _connSub = flutterReactiveBle
+        .connectToDevice(
+          id: device.id,
+          servicesWithCharacteristicsToDiscover: {
+            serviceUuid: [photoCharUuid, childCharUuid, commandCharUuid],
+          },
+          connectionTimeout: const Duration(seconds: 15),
+        )
+        .listen(
+          (state) async {
+            if (state.connectionState == DeviceConnectionState.connected) {
+              print('🔗 Conectado ao ${device.name}');
 
-        isConnected.value = true;
-        isConnecting.value = false;
+              connectedDevice.value = device;
 
-        _notificationController.addNotification(
-          'Conectado ao dispositivo: ${device.name}',
-          NotificationType.connected,
+              try {
+                final mtu = await flutterReactiveBle.requestMtu(
+                  deviceId: device.id,
+                  mtu: 247,
+                );
+                print('MTU negociado: $mtu');
+                await flutterReactiveBle.requestConnectionPriority(
+                  deviceId: device.id,
+                  priority: ConnectionPriority.highPerformance,
+                );
+                print('Solicitada prioridade de conexão alta.');
+              } catch (e) {
+                print('Erro ao solicitar MTU ou prioridade: $e');
+              }
+
+              isConnected.value = true;
+              isConnecting.value = false;
+
+              _notificationController.addNotification(
+                'Conectado ao dispositivo: ${device.name}',
+                NotificationType.connected,
+              );
+
+              Get.snackbar(
+                'Conectado',
+                'Dispositivo "${device.name}" conectado com sucesso.',
+                snackPosition: SnackPosition.TOP,
+                backgroundColor: primaryColor,
+                colorText: secondaryColor,
+                margin: const EdgeInsets.all(12),
+                borderRadius: 12,
+                icon: const Icon(
+                  Icons.check_circle_outline,
+                  color: Color(0xFFE5E0D2),
+                ),
+                duration: const Duration(seconds: 2),
+              );
+
+              _subscribeToCharacteristics(device.id);
+              requestPhoto();
+            } else if (state.connectionState ==
+                DeviceConnectionState.disconnected) {
+              print('❌ Desconectado de ${device.name}');
+              disconnect();
+            }
+          },
+          onError: (e) {
+            print('Erro na conexão: $e');
+            disconnect();
+          },
         );
-        
-        Get.snackbar(
-          'Conectado',
-          'Dispositivo "${device.name}" conectado com sucesso.',
-          snackPosition: SnackPosition.TOP,
-          backgroundColor: const Color(0xFF16213E),
-          colorText: Colors.white,
-          margin: EdgeInsets.zero,
-          borderRadius: 0,
-          icon: const Icon(Icons.check_circle_outline, color: Color(0xFF53BF9D)),
-          snackStyle: SnackStyle.GROUNDED,
-        );
-
-        _subscribeToCharacteristics(device.id);
-        requestPhoto();
-      } else if (state.connectionState == DeviceConnectionState.disconnected) {
-        print('❌ Desconectado de ${device.name}');
-        disconnect();
-      }
-    }, onError: (e) {
-      print('Erro na conexão: $e');
-      disconnect();
-    });
   }
-
 
   void disconnect() {
     _connSub?.cancel();
@@ -232,21 +262,21 @@ class BluetoothController extends GetxController {
         'Desconectado',
         'A conexão com "$disconnectedDeviceName" foi encerrada.',
         snackPosition: SnackPosition.TOP,
-        backgroundColor: const Color(0xFF16213E),
-        colorText: Colors.white,
-        margin: EdgeInsets.zero,
-        borderRadius: 0,
-        icon: Icon(Icons.error_outline, color: Colors.orange.shade600),
-        snackStyle: SnackStyle.GROUNDED,
+        backgroundColor: primaryColor,
+        colorText: secondaryColor,
+        margin: const EdgeInsets.all(12),
+        borderRadius: 12,
+        icon: Icon(Icons.error_outline, color: Colors.red.shade400),
+        duration: Duration(seconds: 2),
       );
     }
 
     isConnected.value = false;
     isConnecting.value = false;
     connectedDeviceName.value = '';
-    
-    connectedDevice.value = null; 
-    
+
+    connectedDevice.value = null;
+
     receivedImage.value = null;
     childDetected.value = false;
 
@@ -257,8 +287,9 @@ class BluetoothController extends GetxController {
 
     print('🔌 Conexão encerrada.');
 
-/// -----------------------------------------------------------------------------------------------
+    /// -----------------------------------------------------------------------------------------------
   }
+
   Future<void> startLiveStream() async {
     if (!isConnected.value || connectedDevice.value == null) return;
     print("➡️  Enviando comando para INICIAR Live Stream...");
@@ -278,7 +309,7 @@ class BluetoothController extends GetxController {
       print('Erro: Dispositivo não conectado para enviar comando.');
       return;
     }
-    
+
     final characteristic = QualifiedCharacteristic(
       serviceId: serviceUuid,
       characteristicId: commandCharUuid,
@@ -314,7 +345,8 @@ class BluetoothController extends GetxController {
     //     duration: const Duration(seconds: 2),
     //   );
   }
-///-------------------------------------------------------------------------------------------------
+
+  ///-------------------------------------------------------------------------------------------------
 
   void _subscribeToCharacteristics(String deviceId) {
     _photoSub?.cancel();
@@ -327,156 +359,180 @@ class BluetoothController extends GetxController {
     _receptionStartTime = null;
 
     _photoSub = flutterReactiveBle
-        .subscribeToCharacteristic(QualifiedCharacteristic(
-      deviceId: deviceId,
-      serviceId: serviceUuid,
-      characteristicId: photoCharUuid,
-    ))
-        .listen((chunk) async {
-      print('📦 Chunk recebido: ${chunk.length} bytes');
-      int i = 0;
-      if (!_receivingImage &&
-          _lastByteOfPrevChunk == 0xFF &&
-          chunk.isNotEmpty &&
-          chunk[0] == 0xD8) {
-        print('🟢 Início JPEG detectado entre chunks');
-        _receptionStartTime = DateTime.now();
-        _receivingImage = true;
-        _imageBuffer.clear();
-        _imageBuffer.add(0xFF);
-      }
-
-      while (i < chunk.length) {
-        if (!_receivingImage) {
-          if (i < chunk.length - 1 &&
-              chunk[i] == 0xFF &&
-              chunk[i + 1] == 0xD8) {
-            print('🟢 Início JPEG detectado dentro do chunk');
-            _receptionStartTime = DateTime.now();
-            _receivingImage = true;
-            _imageBuffer.clear();
-            _imageBuffer.add(0xFF);
-            _imageBuffer.add(0xD8);
-            i += 2;
-          } else {
-            i++;
-          }
-        } else {
-          _imageBuffer.add(chunk[i]);
-
-          if (i < chunk.length - 1 &&
-              chunk[i] == 0xFF &&
-              chunk[i + 1] == 0xD8) {
-            print('⚠️ Novo início JPEG antes do fim do anterior. Reiniciando...');
-            _receptionStartTime = DateTime.now();
-            _imageBuffer.clear();
-            _imageBuffer.add(0xFF);
-            _imageBuffer.add(0xD8);
-            i += 2;
-            continue;
-          }
-
-          int len = _imageBuffer.length;
-          if (len >= 2 &&
-              _imageBuffer[len - 2] == 0xFF &&
-              _imageBuffer[len - 1] == 0xD9) {
-            
-            final eoiDetectionTime = DateTime.now();
-            if (_receptionStartTime != null) {
-              final receptionDuration =
-                  eoiDetectionTime.difference(_receptionStartTime!);
-              print(
-                  'DEBUG: 📸 Imagem completa recebida em ${receptionDuration.inMilliseconds} ms.');
+        .subscribeToCharacteristic(
+          QualifiedCharacteristic(
+            deviceId: deviceId,
+            serviceId: serviceUuid,
+            characteristicId: photoCharUuid,
+          ),
+        )
+        .listen(
+          (chunk) async {
+            print('📦 Chunk recebido: ${chunk.length} bytes');
+            int i = 0;
+            if (!_receivingImage &&
+                _lastByteOfPrevChunk == 0xFF &&
+                chunk.isNotEmpty &&
+                chunk[0] == 0xD8) {
+              print('🟢 Início JPEG detectado entre chunks');
+              _receptionStartTime = DateTime.now();
+              _receivingImage = true;
+              _imageBuffer.clear();
+              _imageBuffer.add(0xFF);
             }
-            print('✅ JPEG completo com $len bytes');
 
-            final data = Uint8List.fromList(List<int>.from(_imageBuffer));
+            while (i < chunk.length) {
+              if (!_receivingImage) {
+                if (i < chunk.length - 1 &&
+                    chunk[i] == 0xFF &&
+                    chunk[i + 1] == 0xD8) {
+                  print('🟢 Início JPEG detectado dentro do chunk');
+                  _receptionStartTime = DateTime.now();
+                  _receivingImage = true;
+                  _imageBuffer.clear();
+                  _imageBuffer.add(0xFF);
+                  _imageBuffer.add(0xD8);
+                  i += 2;
+                } else {
+                  i++;
+                }
+              } else {
+                _imageBuffer.add(chunk[i]);
 
-            if (_decodingInProgress) {
-              print('⚠️ Ignorando imagem pois outra está sendo decodificada');
+                if (i < chunk.length - 1 &&
+                    chunk[i] == 0xFF &&
+                    chunk[i + 1] == 0xD8) {
+                  print(
+                    '⚠️ Novo início JPEG antes do fim do anterior. Reiniciando...',
+                  );
+                  _receptionStartTime = DateTime.now();
+                  _imageBuffer.clear();
+                  _imageBuffer.add(0xFF);
+                  _imageBuffer.add(0xD8);
+                  i += 2;
+                  continue;
+                }
+
+                int len = _imageBuffer.length;
+                if (len >= 2 &&
+                    _imageBuffer[len - 2] == 0xFF &&
+                    _imageBuffer[len - 1] == 0xD9) {
+                  final eoiDetectionTime = DateTime.now();
+                  if (_receptionStartTime != null) {
+                    final receptionDuration = eoiDetectionTime.difference(
+                      _receptionStartTime!,
+                    );
+                    print(
+                      'DEBUG: 📸 Imagem completa recebida em ${receptionDuration.inMilliseconds} ms.',
+                    );
+                  }
+                  print('✅ JPEG completo com $len bytes');
+
+                  final data = Uint8List.fromList(List<int>.from(_imageBuffer));
+
+                  if (_decodingInProgress) {
+                    print(
+                      '⚠️ Ignorando imagem pois outra está sendo decodificada',
+                    );
+                    _imageBuffer.clear();
+                    _receivingImage = false;
+                    _lastByteOfPrevChunk = null;
+                    return;
+                  }
+
+                  _decodingInProgress = true;
+                  try {
+                    final decodingStartTime = DateTime.now();
+                    ui.decodeImageFromList(data, (ui.Image img) {
+                      final decodingDuration = DateTime.now().difference(
+                        decodingStartTime,
+                      );
+                      final totalDuration =
+                          _receptionStartTime != null
+                              ? DateTime.now().difference(_receptionStartTime!)
+                              : null;
+                      final durationSinceEoi = DateTime.now().difference(
+                        eoiDetectionTime,
+                      );
+                      print(
+                        'DEBUG: ⏱️ Tempo (FIM RECEPÇÃO -> FIM DECODIFICAÇÃO): ${durationSinceEoi.inMilliseconds} ms.',
+                      );
+
+                      print(
+                        'DEBUG: 🖼️ Imagem decodificada em ${decodingDuration.inMilliseconds} ms.',
+                      );
+                      if (totalDuration != null) {
+                        print(
+                          'DEBUG: ⏱️ Tempo TOTAL (INÍCIO RECEPÇÃO -> FIM DECODIFICAÇÃO): ${totalDuration.inMilliseconds} ms.',
+                        );
+                      }
+
+                      try {
+                        print(
+                          '🖼️ JPEG decodificado: ${img.width}x${img.height}',
+                        );
+                        receivedImage.value = data;
+                        _photoController.saveImage(data);
+
+                        _notificationController.addNotification(
+                          'Nova foto recebida e salva.',
+                          NotificationType.photoReceived,
+                        );
+                      } catch (e) {
+                        print('❌ Erro na callback de decodificação: $e');
+                      } finally {
+                        _decodingInProgress = false;
+                      }
+                    });
+                  } catch (e) {
+                    print('❌ Erro ao iniciar decodificação da imagem: $e');
+                    _decodingInProgress = false;
+                  }
+
+                  _imageBuffer.clear();
+                  _receivingImage = false;
+                  _lastByteOfPrevChunk = null;
+                }
+                i++;
+              }
+            }
+
+            _lastByteOfPrevChunk = chunk.isNotEmpty ? chunk.last : null;
+
+            if (_receivingImage && _imageBuffer.length > 150000) {
+              print(
+                '🚨 Buffer muito grande (${_imageBuffer.length} bytes). Descartando...',
+              );
               _imageBuffer.clear();
               _receivingImage = false;
-              _lastByteOfPrevChunk = null;
-              return;
-            }
-
-            _decodingInProgress = true;
-            try {
-              final decodingStartTime = DateTime.now();
-              ui.decodeImageFromList(data, (ui.Image img) {
-                
-                final decodingDuration =
-                    DateTime.now().difference(decodingStartTime);
-                final totalDuration = _receptionStartTime != null
-                    ? DateTime.now().difference(_receptionStartTime!)
-                    : null;
-                final durationSinceEoi = DateTime.now().difference(eoiDetectionTime);
-                print('DEBUG: ⏱️ Tempo (FIM RECEPÇÃO -> FIM DECODIFICAÇÃO): ${durationSinceEoi.inMilliseconds} ms.');
-
-                print(
-                    'DEBUG: 🖼️ Imagem decodificada em ${decodingDuration.inMilliseconds} ms.');
-                if (totalDuration != null) {
-                  print(
-                      'DEBUG: ⏱️ Tempo TOTAL (INÍCIO RECEPÇÃO -> FIM DECODIFICAÇÃO): ${totalDuration.inMilliseconds} ms.');
-                }
-
-                try {
-                  print('🖼️ JPEG decodificado: ${img.width}x${img.height}');
-                  receivedImage.value = data;
-                  _photoController.saveImage(data);
-
-                  _notificationController.addNotification(
-                    'Nova foto recebida e salva.',
-                    NotificationType.photoReceived,
-                  );
-                } catch (e) {
-                  print('❌ Erro na callback de decodificação: $e');
-                } finally {
-                  _decodingInProgress = false;
-                }
-              });
-            } catch (e) {
-              print('❌ Erro ao iniciar decodificação da imagem: $e');
               _decodingInProgress = false;
             }
-
+          },
+          onError: (e) {
+            print('Erro ao receber imagem: $e');
             _imageBuffer.clear();
             _receivingImage = false;
-            _lastByteOfPrevChunk = null;
-          }
-          i++;
-        }
-      }
-
-      _lastByteOfPrevChunk = chunk.isNotEmpty ? chunk.last : null;
-
-      if (_receivingImage && _imageBuffer.length > 150000) {
-        print(
-            '🚨 Buffer muito grande (${_imageBuffer.length} bytes). Descartando...');
-        _imageBuffer.clear();
-        _receivingImage = false;
-        _decodingInProgress = false;
-      }
-
-    }, onError: (e) {
-      print('Erro ao receber imagem: $e');
-      _imageBuffer.clear();
-      _receivingImage = false;
-      _decodingInProgress = false;
-    });
+            _decodingInProgress = false;
+          },
+        );
 
     _childSub = flutterReactiveBle
-        .subscribeToCharacteristic(QualifiedCharacteristic(
-      deviceId: deviceId,
-      serviceId: serviceUuid,
-      characteristicId: childCharUuid,
-    ))
-        .listen((data) {
-      var str = String.fromCharCodes(data);
-      childDetected.value = str.toLowerCase() == 'true' || str == '1';
-    }, onError: (e) {
-      print('Erro ao receber dado child: $e');
-    });
+        .subscribeToCharacteristic(
+          QualifiedCharacteristic(
+            deviceId: deviceId,
+            serviceId: serviceUuid,
+            characteristicId: childCharUuid,
+          ),
+        )
+        .listen(
+          (data) {
+            var str = String.fromCharCodes(data);
+            childDetected.value = str.toLowerCase() == 'true' || str == '1';
+          },
+          onError: (e) {
+            print('Erro ao receber dado child: $e');
+          },
+        );
   }
 
   @override

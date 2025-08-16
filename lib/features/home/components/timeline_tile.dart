@@ -6,7 +6,7 @@ class MyTimelineTile extends StatelessWidget {
   final bool isFirst;
   final bool isLast;
   final bool isPast;
-  final bool isActive; // NOVO: para saber qual passo está ativo
+  final bool isActive;
   final Widget eventCard;
 
   const MyTimelineTile({
@@ -20,39 +20,40 @@ class MyTimelineTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // NOVO: Paleta de cores para os elementos da timeline
-    final Color pastColor = const Color(0xFF53BF9D);
-    final Color activeColor = const Color(0xFF0F3460);
-    final Color inactiveColor = const Color(0xFF16213E);
+    const Color primaryColor = Color(0xFF53A194);
+    const Color textColor = Color(0xFF524F42);
+    const Color inactiveColor = Color(0xFF524F42);
 
     return SizedBox(
-      height: 110, // Altura ajustada
+      height: 110,
       child: TimelineTile(
         isFirst: isFirst,
         isLast: isLast,
-        // Decoração da linha
         beforeLineStyle: LineStyle(
-          color: isPast ? pastColor : inactiveColor,
+          color: isPast ? primaryColor : inactiveColor.withOpacity(0.3),
           thickness: 2,
         ),
-        // Decoração do indicador (a bolinha)
         indicatorStyle: IndicatorStyle(
           width: 30,
           height: 30,
-          // Cor do indicador muda com o estado
-          color: isPast ? pastColor : (isActive ? activeColor : inactiveColor),
-          // Ícone dentro do indicador
+          color:
+              isPast
+                  ? primaryColor
+                  : (isActive ? textColor : inactiveColor.withOpacity(0.3)),
           iconStyle: IconStyle(
-            color: Colors.white,
-            iconData: isPast ? Icons.check : (isActive ? Icons.hdr_strong : Icons.circle_outlined),
+            color:
+                isPast
+                    ? Colors.white
+                    : (isActive ? Colors.white : textColor.withOpacity(0.7)),
+            iconData:
+                isPast
+                    ? Icons.check
+                    : (isActive ? Icons.hdr_strong : Icons.circle_outlined),
             fontSize: 18,
           ),
           padding: const EdgeInsets.all(4),
         ),
-        endChild: EventCard(
-          isPast: isPast,
-          child: eventCard,
-        ),
+        endChild: EventCard(isPast: isPast, child: eventCard),
       ),
     );
   }

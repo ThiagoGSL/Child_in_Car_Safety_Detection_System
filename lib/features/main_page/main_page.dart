@@ -12,13 +12,19 @@ class MainPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final MainPageController controller = Get.find<MainPageController>();
-    final NotificationController notificationController = Get.find<NotificationController>();
+    final NotificationController notificationController =
+        Get.find<NotificationController>();
+
+    const Color primaryColor = Color(0xFF53A194);
+    const Color secondaryColor = Color(0xFFE5E0D2);
+    const Color textColor = Color(0xFF524F42);
 
     return Scaffold(
-      backgroundColor: const Color(0xFF1A1A2E),
+      backgroundColor: secondaryColor,
       appBar: AppBar(
         leading: Obx(() {
-          bool shouldShowBack = (controller.selectedIndex.value == 2) &&
+          bool shouldShowBack =
+              (controller.selectedIndex.value == 2) &&
               (controller.showBlePage.value ||
                   controller.showPhotoPage.value ||
                   controller.showFormPage.value);
@@ -40,61 +46,72 @@ class MainPage extends StatelessWidget {
         }),
         title: Obx(() {
           if (controller.selectedIndex.value == 0) {
-            return const Row(
+            return Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.crib_outlined, size: 24),
-                SizedBox(width: 8),
-                Text('SafeBaby'),
+                // Substituído o ícone pelo logo da aplicação
+                Image.asset('lib/assets/logoMarrom.png', height: 40),
+                const SizedBox(width: 8),
+                Text('SafeBaby', style: TextStyle(color: textColor)),
               ],
             );
           }
-          return Text(controller.appBarTitle.value);
+          return Text(
+            controller.appBarTitle.value,
+            style: TextStyle(color: textColor),
+          );
         }),
         centerTitle: true,
-        backgroundColor: const Color(0xFF1A1A2E),
-        foregroundColor: Colors.white,
+        backgroundColor: secondaryColor,
+        foregroundColor: textColor,
         elevation: 0,
         actions: [
           Obx(() {
-            // Botão só aparece se houver notificações para limpar
-            bool showClearButton = controller.selectedIndex.value == 1 && notificationController.notifications.isNotEmpty;
+            bool showClearButton =
+                controller.selectedIndex.value == 1 &&
+                notificationController.notifications.isNotEmpty;
 
             if (showClearButton) {
               return IconButton(
                 icon: const Icon(Icons.delete_sweep_outlined),
                 tooltip: 'Limpar notificações',
                 onPressed: () {
-                  // Exibe uma caixa de diálogo para confirmação
                   Get.dialog(
                     AlertDialog(
-                      backgroundColor: const Color(0xFF16213E), // Cor de fundo do tema
+                      backgroundColor: secondaryColor,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
                       title: const Text(
                         'Limpar Histórico',
-                        style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                        style: TextStyle(
+                          color: textColor,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
-                      content: const Text(
+                      content: Text(
                         'Deseja realmente apagar todas as notificações? Esta ação não pode ser desfeita.',
-                        style: TextStyle(color: Colors.white70),
+                        style: TextStyle(color: textColor.withOpacity(0.7)),
                       ),
                       actions: [
-                        // Botão para cancelar a ação
                         TextButton(
-                          onPressed: () => Get.back(), // Apenas fecha o diálogo
-                          child: const Text('Cancelar', style: TextStyle(color: Colors.white70)),
+                          onPressed: () => Get.back(),
+                          child: Text(
+                            'Cancelar',
+                            style: TextStyle(color: textColor.withOpacity(0.7)),
+                          ),
                         ),
-                        // Botão para confirmar a exclusão
                         TextButton(
                           onPressed: () {
                             notificationController.clearNotifications();
-                            Get.back(); // Fecha o diálogo após a exclusão
+                            Get.back();
                           },
                           child: Text(
                             'Excluir',
-                            style: TextStyle(color: Colors.red.shade400, fontWeight: FontWeight.bold),
+                            style: TextStyle(
+                              color: Colors.red.shade400,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                         ),
                       ],
@@ -103,7 +120,6 @@ class MainPage extends StatelessWidget {
                 },
               );
             }
-            // Mantém o espaço para centralizar o título
             return const SizedBox(width: 48);
           }),
         ],
@@ -121,53 +137,71 @@ class MainPage extends StatelessWidget {
           }
         }
         return Center(
-          child: controller.widgetOptions.elementAt(controller.selectedIndex.value),
+          child: controller.widgetOptions.elementAt(
+            controller.selectedIndex.value,
+          ),
         );
       }),
-      bottomNavigationBar: Obx(() => BottomNavigationBar(
-            backgroundColor: const Color(0xFF16213E),
-            type: BottomNavigationBarType.fixed,
-            unselectedItemColor: Colors.white54,
-            selectedItemColor: const Color(0xFF53BF9D),
-            selectedFontSize: 12,
-            unselectedFontSize: 12,
-            items: <BottomNavigationBarItem>[
-              const BottomNavigationBarItem(icon: Icon(Icons.home_outlined), activeIcon: Icon(Icons.home), label: 'Início'),
-              BottomNavigationBarItem(
-                icon: Stack(
-                  clipBehavior: Clip.none,
-                  children: [
-                    const Icon(Icons.notifications_outlined),
-                    if (notificationController.unreadCount.value > 0)
-                      Positioned(
-                        right: -8,
-                        top: -8,
-                        child: Container(
-                          padding: const EdgeInsets.all(4),
-                          decoration: BoxDecoration(
-                            color: Colors.red.shade700,
-                            shape: BoxShape.circle,
-                            border: Border.all(color: const Color(0xFF16213E), width: 1.5),
-                          ),
-                          constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
-                          child: Center(
-                            child: Text(
-                              '${notificationController.unreadCount.value}',
-                              style: const TextStyle(color: Colors.white, fontSize: 10),
+      bottomNavigationBar: Obx(
+        () => BottomNavigationBar(
+          backgroundColor: secondaryColor,
+          type: BottomNavigationBarType.fixed,
+          unselectedItemColor: textColor.withOpacity(0.6),
+          selectedItemColor: primaryColor,
+          selectedFontSize: 12,
+          unselectedFontSize: 12,
+          items: <BottomNavigationBarItem>[
+            const BottomNavigationBarItem(
+              icon: Icon(Icons.home_outlined),
+              activeIcon: Icon(Icons.home),
+              label: 'Início',
+            ),
+            BottomNavigationBarItem(
+              icon: Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  const Icon(Icons.notifications_outlined),
+                  if (notificationController.unreadCount.value > 0)
+                    Positioned(
+                      right: -8,
+                      top: -8,
+                      child: Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: BoxDecoration(
+                          color: Colors.red.shade700,
+                          shape: BoxShape.circle,
+                          border: Border.all(color: secondaryColor, width: 1.5),
+                        ),
+                        constraints: const BoxConstraints(
+                          minWidth: 18,
+                          minHeight: 18,
+                        ),
+                        child: Center(
+                          child: Text(
+                            '${notificationController.unreadCount.value}',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 10,
                             ),
                           ),
                         ),
                       ),
-                  ],
-                ),
-                activeIcon: const Icon(Icons.notifications),
-                label: 'Notificações',
+                    ),
+                ],
               ),
-              const BottomNavigationBarItem(icon: Icon(Icons.settings_outlined), activeIcon: Icon(Icons.settings), label: 'Configurações'),
-            ],
-            currentIndex: controller.selectedIndex.value,
-            onTap: controller.onItemTapped,
-          )),
+              activeIcon: const Icon(Icons.notifications),
+              label: 'Notificações',
+            ),
+            const BottomNavigationBarItem(
+              icon: Icon(Icons.settings_outlined),
+              activeIcon: Icon(Icons.settings),
+              label: 'Configurações',
+            ),
+          ],
+          currentIndex: controller.selectedIndex.value,
+          onTap: controller.onItemTapped,
+        ),
+      ),
     );
   }
 }
