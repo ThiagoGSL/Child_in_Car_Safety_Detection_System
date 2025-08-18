@@ -4,6 +4,10 @@
 #include <BLE2902.h>
 #include "esp_camera.h"
 
+
+// ledPin refers to ESP32-CAM GPIO 4 (flashlight)
+const int ledPin = 4;
+ 
 BLEServer* pServer = nullptr;
 BLECharacteristic* pPhotoCharacteristic = nullptr;
 BLECharacteristic* pCommandCharacteristic = nullptr;
@@ -126,6 +130,9 @@ class MyServerCallbacks : public BLEServerCallbacks {
 };
 
 void setupCamera() {
+    // initialize digital pin ledPin as an output
+  pinMode(ledPin, OUTPUT);
+
   camera_config_t config;
   config.ledc_channel = LEDC_CHANNEL_0;
   config.ledc_timer   = LEDC_TIMER_0;
@@ -193,19 +200,25 @@ void loop() {
     if (fotoSolicitadaManualmente) {
       fotoSolicitadaManualmente = false;
       Serial.println("--- Processando solicitação de foto MANUAL ---");
+      digitalWrite(ledPin, HIGH);
       captureAndSendPhoto();
+      digitalWrite(ledPin, LOW);
       lastPhotoSendTime = millis(); // Reseta o timer do envio periódico
     }
     // 2. Prioridade para o modo Live Stream
     else if (liveStreamActive) {
       Serial.println("--- Enviando frame (Live Stream) ---");
+      digitalWrite(ledPin, HIGH);
       captureAndSendPhoto();
+      digitalWrite(ledPin, LOW);
       delay(100); // Pequeno delay para não sobrecarregar
     }
     // 3. Lógica de envio periódico (se não houver manual nem live stream)
     else if (millis() - lastPhotoSendTime >= photoInterval) {
       Serial.println("--- Processando envio de foto PERIÓDICO (1 min) ---");
+      digitalWrite(ledPin, HIGH);
       captureAndSendPhoto();
+      digitalWrite(ledPin, LOW);
       lastPhotoSendTime = millis(); // Atualiza o tempo do último envio
     }
   }
