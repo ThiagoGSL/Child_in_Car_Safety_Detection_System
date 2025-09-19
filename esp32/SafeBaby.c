@@ -4,10 +4,6 @@
 #include <BLE2902.h>
 #include "esp_camera.h"
 
-
-// ledPin refers to ESP32-CAM GPIO 4 (flashlight)
-const int ledPin = 4;
- 
 BLEServer* pServer = nullptr;
 BLECharacteristic* pPhotoCharacteristic = nullptr;
 BLECharacteristic* pCommandCharacteristic = nullptr;
@@ -18,7 +14,6 @@ volatile bool isSendingPhoto = false;
 volatile bool fotoSolicitadaManualmente = false;
 volatile bool liveStreamActive = false;
 
-// --- NOVAS VARIÁVEIS PARA O TEMPORIZADOR ---
 unsigned long lastPhotoSendTime = 0;
 const unsigned long photoInterval = 60000; // 60000 ms = 1 minuto
 
@@ -130,27 +125,24 @@ class MyServerCallbacks : public BLEServerCallbacks {
 };
 
 void setupCamera() {
-    // initialize digital pin ledPin as an output
-  pinMode(ledPin, OUTPUT);
-
   camera_config_t config;
   config.ledc_channel = LEDC_CHANNEL_0;
   config.ledc_timer   = LEDC_TIMER_0;
-  config.pin_d0       = 5;
-  config.pin_d1       = 18;
-  config.pin_d2       = 19;
-  config.pin_d3       = 21;
-  config.pin_d4       = 36;
-  config.pin_d5       = 39;
-  config.pin_d6       = 34;
-  config.pin_d7       = 35;
-  config.pin_xclk     = 0;
-  config.pin_pclk     = 22;
-  config.pin_vsync    = 25;
-  config.pin_href     = 23;
-  config.pin_sscb_sda = 26;
-  config.pin_sscb_scl = 27;
-  config.pin_pwdn     = 32;
+  config.pin_d0       = 11;
+  config.pin_d1       = 9;
+  config.pin_d2       = 8;
+  config.pin_d3       = 10;
+  config.pin_d4       = 12;
+  config.pin_d5       = 18;
+  config.pin_d6       = 17;
+  config.pin_d7       = 16;
+  config.pin_xclk     = 15;
+  config.pin_pclk     = 13;
+  config.pin_vsync    = 6;
+  config.pin_href     = 7;
+  config.pin_sscb_sda = 4;
+  config.pin_sscb_scl = 5;
+  config.pin_pwdn     = 38;
   config.pin_reset    = -1;
   config.xclk_freq_hz = 20000000;
   config.pixel_format = PIXFORMAT_JPEG;
@@ -168,6 +160,11 @@ void setupCamera() {
 
 void setup() {
   Serial.begin(115200);
+  if (psramFound()) {
+    Serial.println("✅ PSRAM detectada e habilitada!");
+  } else {
+    Serial.println("❌ PSRAM NÃO encontrada!");
+  }
   Serial.println("Inicializando ESP32-CAM (Modo Live Stream)...");
   setupCamera();
   BLEDevice::init("SafeBaby-CAM");
@@ -192,33 +189,25 @@ void setup() {
   Serial.println("Aguardando conexão BLE...");
 }
 
-
-// --- LÓGICA PRINCIPAL MODIFICADA ---
 void loop() {
   if (deviceConnected) {
     // 1. Prioridade para solicitação de foto manual
     if (fotoSolicitadaManualmente) {
       fotoSolicitadaManualmente = false;
       Serial.println("--- Processando solicitação de foto MANUAL ---");
-      digitalWrite(ledPin, HIGH);
       captureAndSendPhoto();
-      digitalWrite(ledPin, LOW);
       lastPhotoSendTime = millis(); // Reseta o timer do envio periódico
     }
     // 2. Prioridade para o modo Live Stream
     else if (liveStreamActive) {
       Serial.println("--- Enviando frame (Live Stream) ---");
-      digitalWrite(ledPin, HIGH);
       captureAndSendPhoto();
-      digitalWrite(ledPin, LOW);
       delay(100); // Pequeno delay para não sobrecarregar
     }
     // 3. Lógica de envio periódico (se não houver manual nem live stream)
     else if (millis() - lastPhotoSendTime >= photoInterval) {
       Serial.println("--- Processando envio de foto PERIÓDICO (1 min) ---");
-      digitalWrite(ledPin, HIGH);
       captureAndSendPhoto();
-      digitalWrite(ledPin, LOW);
       lastPhotoSendTime = millis(); // Atualiza o tempo do último envio
     }
   }
